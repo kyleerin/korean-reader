@@ -1,0 +1,53 @@
+# IDEs
+.idea/
+*.iml
+.vscode/
+
+# Gradle
+.gradle/
+build/
+**/build/
+local.properties
+gradle-wrapper.jar
+
+# Android
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+/android/captures/
+/android/.externalNativeBuild/
+/android/.cxx/
+
+# iOS / Xcode
+*.xcworkspace/
+xcuserdata/
+*.xccheckout
+*.moved-aside
+DerivedData/
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+Pods/
+.xcode.env.local
+
+# KMP / Kotlin Native
+*.klib
+kotlin-js-store/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Logs
+*.log
+
+# Secrets / local config
+*.env
+secrets.properties
+google-services.json
+GoogleService-Info.plist
