@@ -1,6 +1,7 @@
 # Korean Reading-Immersion App — Specification & Architecture
 
-*Draft v0.1 — solo-developer build. Locked decisions and open questions are marked inline.*
+*Draft v0.2 — solo-developer build. Locked decisions and open questions are marked inline.*
+*v0.2 change: platform target changed from iOS + Android (KMP) to Web (PWA, TypeScript).*
 
 ---
 
@@ -13,10 +14,10 @@ A reading-immersion app for learners of **Korean**. The user brings their own te
 | Decision | Choice | Rationale |
 |---|---|---|
 | Target language | Korean only | Eliminates pluggable tokenizers, multi-dictionary management, language-switcher UI. |
-| Platforms | iOS + Android via **Kotlin Multiplatform (KMP)** | One shared codebase for logic; near-native on each platform. |
-| Morphological analysis | **On-device** (mecab-ko) | Fast taps, full offline reading, no per-tap network round-trip. |
+| Platform | **Web (PWA)** — TypeScript | Single codebase, runs in any modern browser, installable on iOS and Android without App Store friction. Lower technical bar than native KMP. |
+| Morphological analysis | **On-device** (mecab-ko compiled to **WebAssembly**) | Fast taps, full offline reading, no per-tap network round-trip. Emscripten build is more tractable than iOS/Android native interop. |
 | Content source | **User import** (paste / file) | No licensing burden, no content pipeline, no backend needed for v1. |
-| Data location | **Local-first**, device-local for v1 | Server only becomes necessary for cross-device sync, which is deferred. |
+| Data location | **Browser-local** (OPFS-backed SQLite) for v1 | Server only becomes necessary for cross-device sync, which is deferred. |
 
 ## 3. Core user loop
 
@@ -39,7 +40,7 @@ Korean is **agglutinative**: the unit between spaces (an *eojeol*) bundles a con
 raw text
   → sentence segmentation (punctuation-based)
   → eojeol split (whitespace)
-  → morphological analysis per eojeol  [mecab-ko, on-device]
+  → morphological analysis per eojeol  [mecab-ko WASM, on-device]
       → morphemes + part-of-speech + lemma
   → for each content morpheme (noun / verb stem / adjective / adverb):
       → reconstruct dictionary form (e.g. verb stem + 다)
@@ -52,7 +53,7 @@ raw text
 
 **Knowledge is tracked at the lemma level**, not the surface level: knowing `먹다` counts whether the text shows `먹어요` or `먹었어요`.
 
-**Performance:** never analyze a whole book at once. Analyze lazily per page/screen and cache the result in the local DB so re-opening a text is instant.
+**Performance:** never analyze a whole text at once. Analyze lazily per page/screen and cache the result in the local DB so re-opening a text is instant. The WASM module is loaded once at startup and kept alive; individual `analyze()` calls are fast synchronous calls into WASM memory.
 
 **Korean-specific win:** the analyzer already returns the particle/ending breakdown for free. Surface that as a tap-time explainer (`먹었어요 → 먹다 + past + polite`) and color particles distinctly. Particles and endings are exactly where Korean learners struggle, so this is high-value for low extra cost.
 
@@ -62,7 +63,7 @@ raw text
 
 ## 5. Data model
 
-Local SQLite via **SQLDelight** (KMP-native, type-safe, shared schema).
+Browser-local SQLite via **wa-sqlite** (OPFS backend — persistent, fast, available in all modern browsers).
 
 - **dictionary_entry** *(bundled, read-only)* — `lemma`, `pos`, `definitions` (KO→EN), `examples?`, `frequency_rank?`
 - **user_word_state** — `lemma`, `pos`, `status` (NEW / LEARNING / KNOWN / IGNORED), `first_seen`, `last_seen`, `times_seen`
@@ -71,45 +72,63 @@ Local SQLite via **SQLDelight** (KMP-native, type-safe, shared schema).
 - **review_card** — `lemma`, `pos`, `example_sentence` (captured when saved), FSRS fields: `stability`, `difficulty`, `due_date`, `reps`, `lapses`
 - **review_log** — `card_id`, `rating`, `reviewed_at` (kept for later FSRS optimization)
 
+The bundled dictionary is loaded into the SQLite DB on first launch (or shipped as a pre-populated `.sqlite` file served as a static asset and copied into OPFS).
+
 ---
 
-## 6. Architecture (KMP layering)
+## 6. Architecture (web layering)
 
-**Shared (`commonMain`, pure Kotlin) — most of the app:**
-- Domain models, reading-pipeline orchestration
-- Knowledge-state logic
-- SRS scheduler (**FSRS** — modern choice over SM-2)
-- Repository layer + SQLDelight database
-- Dictionary lookup
-- Analyzer *interface* via `expect`/`actual`
+```
+┌─────────────────────────────────────────────┐
+│                 UI Layer                    │
+│  (Svelte or React — TBD, see open decision) │
+│  Reader view · Tap panel · Review deck      │
+├─────────────────────────────────────────────┤
+│              Application Layer              │
+│  ReadingPipeline · KnowledgeService         │
+│  ImportService · ReviewScheduler (FSRS)     │
+├─────────────────────────────────────────────┤
+│              Data Layer                     │
+│  DictionaryRepository · KnowledgeRepository │
+│  TextRepository · ReviewRepository          │
+│  wa-sqlite (OPFS) + token_cache             │
+├──────────────┬──────────────────────────────┤
+│  WASM Module │  Web Platform APIs           │
+│  mecab-ko    │  File API · Web Speech API   │
+│  (Emscripten)│  Service Worker (offline)    │
+└──────────────┴──────────────────────────────┘
+```
 
-**Platform-specific (`androidMain` / `iosMain`):**
-- **mecab-ko binding** (the `actual` analyzer) — C++ via JNI on Android, C++ bridged through Obj-C/Swift on iOS
-- TTS wrapper (native `ko-KR` voices ship on both OSes — word/sentence audio is essentially free)
-- File-import pickers
-- UI
+**WASM analyzer module:**
+- mecab-ko C++ compiled via Emscripten to `mecab.wasm` + `mecab.js` glue
+- mecab-ko-dic binary dictionary bundled as a static asset, mounted into WASM's virtual FS at startup
+- Exposes a single `analyze(sentence: string): MorphemeResult[]` function
+- Loaded once in a Web Worker to avoid blocking the main thread
 
-> **Open decision — UI sharing.** *Option A:* **Compose Multiplatform** shares even the reader view across both platforms (max reuse; iOS support is newer/riskier). *Option B:* native UI — Compose on Android, SwiftUI on iOS (lower risk, double the UI work). Logic is shared either way. *Recommendation for a solo dev: try Compose Multiplatform; it's the biggest reuse lever for the reader screen.*
+**Service Worker:**
+- Caches all static assets (app shell, WASM, dictionary) on install
+- App is fully usable offline after first load
 
-> **Highest-risk component: on-device mecab-ko across both platforms.** mecab-ko is C++ and the dictionary (`mecab-ko-dic`, tens of MB) ships as a bundled binary asset. The native bridging is the single trickiest piece of the whole project — **spike it before committing to anything else** (see build sequence).
+> **Open decision — UI framework.** *Option A:* **Svelte** — minimal bundle size, less boilerplate, good fit for a document-heavy app. *Option B:* **React** — broader ecosystem, more familiar to most developers. Both work equally well for this app. *Recommendation: Svelte if you want a leaner build; React if you want more library options.*
 
 ---
 
 ## 7. Tooling choices
 
-- **Analyzer:** mecab-ko + mecab-ko-dic (best quality/perf balance). Alternatives if needed: Komoran, Okt, Khaiii.
+- **Analyzer:** mecab-ko compiled to WASM via **Emscripten**. Alternatives if WASM build proves too difficult: a pure-JS Korean tokenizer (lower quality) or a small server-side analysis endpoint.
 - **Dictionary (KO→EN):** open datasets such as KEngDic and Wiktionary extracts. Optionally Urimalsaem (국립국어원) for KO→KO definitions for advanced learners. *Verify each source's license before bundling.*
 - **Script:** Hangul is left-to-right, phonetic — no furigana or RTL handling. Offer an optional **Revised Romanization** toggle for beginners.
-- **SRS:** FSRS (well-documented; port or implement the algorithm).
-- **DB:** SQLDelight. **TTS:** native platform voices.
+- **SRS:** FSRS (well-documented; implement in TypeScript).
+- **DB:** wa-sqlite (OPFS). **TTS:** Web Speech API (`ko-KR` voice — ships on Chrome, Safari, Firefox).
+- **Build:** Vite. **Language:** TypeScript throughout.
 
 ---
 
 ## 8. Content import (user-import model)
 
-- **Paste text** — trivial; the MVP entry point.
-- **EPUB import** — parse EPUB (zip + XHTML), strip to plain-text chapters. Use a Kotlin EPUB parser or a minimal custom one.
-- **URL import** *(deferred)* — fetch the page (no CORS issue on native HTTP) then run a Readability-style extractor to get clean article text. Client-side keeps you backend-free.
+- **Paste text** — trivial; the MVP entry point. Textarea → pipeline.
+- **File import** — File API (`<input type="file">` or drag-and-drop). Plain `.txt` immediately. EPUB next (zip + XHTML, strip to plain text).
+- **URL import** *(deferred)* — `fetch` the page then run a Readability-style extractor. No CORS issue if proxied, or use the Readability library client-side on the raw HTML.
 
 Because the user supplies their own content, there is **no redistribution and no licensing exposure** — ideal for a solo v1.
 
@@ -119,17 +138,18 @@ Because the user supplies their own content, there is **no redistribution and no
 
 **In:**
 - Korean only
-- Paste + EPUB import
-- On-device analyzer + bundled KO→EN dictionary
+- Paste + plain-text file import
+- On-device mecab-ko (WASM) + bundled KO→EN dictionary
 - Tap-to-define with lemma lookup **and** conjugation/particle breakdown
 - Mark word status; live-recoloring reading view
 - FSRS review of saved words
-- Fully offline, device-local (no account)
+- Fully offline after first load (Service Worker + OPFS)
+- PWA manifest (installable on desktop/mobile)
 
 **Deferred:**
+- EPUB import
 - URL import
 - Account + cloud sync across devices
-- Audio sentence-mining / clip capture
 - Statistics dashboard
 - KO→KO dictionary
 - Any second language
@@ -138,19 +158,20 @@ Because the user supplies their own content, there is **no redistribution and no
 
 ## 10. Risks & open decisions (summary)
 
-1. **On-device mecab-ko bridging on both platforms** — highest risk. De-risk first.
-2. **Compose Multiplatform vs native UI** — decide by appetite for bleeding-edge (§6).
-3. **Homograph / sense disambiguation** — lemma+POS for MVP (§4).
-4. **Dictionary licensing** — verify each dataset before shipping (§7).
-5. **Large-text performance** — lazy per-page analysis + token caching (§4).
+1. **mecab-ko WASM build** — still the highest-risk piece. Emscripten compilation of mecab-ko C++ plus bundling mecab-ko-dic into WASM virtual FS. Prior art exists (Japanese MeCab has been Emscripten-compiled); plan to adapt that work. De-risk first.
+2. **OPFS browser support** — broadly available (Chrome, Firefox, Safari 16.4+). Edge case: Safari on iOS has had OPFS quirks. Test early.
+3. **Dictionary bundle size** — mecab-ko-dic compiled is tens of MB. Must be loaded into WASM virtual FS at startup; needs a loading state and possibly lazy loading.
+4. **UI framework choice** — Svelte vs React (§6).
+5. **Homograph / sense disambiguation** — lemma+POS for MVP (§4).
+6. **Dictionary licensing** — verify each dataset before shipping (§7).
 
 ---
 
 ## 11. Suggested build sequence (de-risk hardest-first)
 
-1. **Spike the analyzer.** Get mecab-ko analyzing one Korean sentence on *both* Android and iOS from shared KMP code. This is the make-or-break technical bet — prove it before anything else.
-2. **Dictionary + lookup.** Bundle the dictionary; prove tap → dictionary-form → definition on a hardcoded text.
-3. **Persistence + rendering.** SQLDelight schema, word-state save/load, colored tappable reading view.
-4. **Import.** Paste first, then EPUB.
-5. **Review mode.** FSRS scheduler + review UI over saved words.
-6. **Polish.** Romanization toggle, particle/conjugation explainer, TTS.
+1. **Spike the analyzer.** Compile mecab-ko to WASM with Emscripten, load mecab-ko-dic, and analyze one Korean sentence in the browser console. This is the make-or-break technical bet — prove it before anything else.
+2. **Dictionary + lookup.** Load the KO→EN dictionary into wa-sqlite (OPFS); prove tap → dictionary-form → definition on a hardcoded text rendered in the browser.
+3. **Persistence + rendering.** Full wa-sqlite schema, word-state save/load, colored tappable reading view with live recoloring.
+4. **Import.** Paste first, then plain-text file upload.
+5. **Review mode.** FSRS scheduler (TypeScript) + review UI over saved words.
+6. **PWA + polish.** Service Worker for offline, PWA manifest, Romanization toggle, particle/conjugation explainer panel, TTS via Web Speech API.
