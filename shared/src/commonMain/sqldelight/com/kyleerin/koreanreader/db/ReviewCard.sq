@@ -1,0 +1,31 @@
+CREATE TABLE IF NOT EXISTS review_card (
+    lemma TEXT NOT NULL,
+    pos TEXT NOT NULL,
+    example_sentence TEXT NOT NULL DEFAULT '',
+    stability REAL NOT NULL DEFAULT 0.0,
+    difficulty REAL NOT NULL DEFAULT 5.0,
+    due_at INTEGER NOT NULL,
+    interval_days INTEGER NOT NULL DEFAULT 0,
+    reps INTEGER NOT NULL DEFAULT 0,
+    lapses INTEGER NOT NULL DEFAULT 0,
+    state TEXT NOT NULL DEFAULT 'NEW',
+    last_reviewed_at INTEGER,
+    PRIMARY KEY (lemma, pos)
+);
+
+getDueCards:
+SELECT * FROM review_card WHERE due_at <= ? ORDER BY due_at ASC;
+
+getCard:
+SELECT * FROM review_card WHERE lemma = ? AND pos = ?;
+
+upsertCard:
+INSERT OR REPLACE INTO review_card
+    (lemma, pos, example_sentence, stability, difficulty, due_at, interval_days, reps, lapses, state, last_reviewed_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+countDue:
+SELECT COUNT(*) FROM review_card WHERE due_at <= ?;
+
+countAll:
+SELECT COUNT(*) FROM review_card;

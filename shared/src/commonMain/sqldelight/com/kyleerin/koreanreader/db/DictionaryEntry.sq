@@ -1,0 +1,21 @@
+CREATE TABLE IF NOT EXISTS dictionary_entry (
+    lemma TEXT NOT NULL,
+    pos TEXT NOT NULL,
+    definitions TEXT NOT NULL,
+    examples TEXT NOT NULL DEFAULT '',
+    frequency_rank INTEGER,
+    PRIMARY KEY (lemma, pos)
+);
+
+lookupByLemmaAndPos:
+SELECT * FROM dictionary_entry WHERE lemma = ? AND pos = ?;
+
+lookupByLemma:
+SELECT * FROM dictionary_entry WHERE lemma = ?;
+
+insertOrReplace:
+INSERT OR REPLACE INTO dictionary_entry (lemma, pos, definitions, examples, frequency_rank)
+VALUES (?, ?, ?, ?, ?);
+
+count:
+SELECT COUNT(*) FROM dictionary_entry;

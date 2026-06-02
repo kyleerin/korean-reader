@@ -1,0 +1,39 @@
+CREATE TABLE IF NOT EXISTS user_word_state (
+    lemma TEXT NOT NULL,
+    pos TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'NEW',
+    first_seen INTEGER NOT NULL,
+    last_seen INTEGER NOT NULL,
+    times_seen INTEGER NOT NULL DEFAULT 1,
+    PRIMARY KEY (lemma, pos)
+);
+
+getStatus:
+SELECT status FROM user_word_state WHERE lemma = ? AND pos = ?;
+
+getWordState:
+SELECT * FROM user_word_state WHERE lemma = ? AND pos = ?;
+
+-- Insert on first sight; on conflict bump times_seen and update last_seen, but
+-- deliberately do NOT overwrite status so a known word never reverts to NEW.
+upsertOnSeen:
+INSERT INTO user_word_state (lemma, pos, status, first_seen, last_seen, times_seen)
+VALUES (?, ?, 'NEW', ?, ?, 1)
+ON CONFLICT(lemma, pos) DO UPDATE SET
+    last_seen = excluded.last_seen,
+    times_seen = times_seen + 1;
+
+-- Called when the user explicitly sets a word's status. first_seen is kept if
+-- the row already exists (the ON CONFLICT clause omits it from the SET list).
+upsertWithStatus:
+INSERT INTO user_word_state (lemma, pos, status, first_seen, last_seen, times_seen)
+VALUES (?, ?, ?, ?, ?, 1)
+ON CONFLICT(lemma, pos) DO UPDATE SET
+    status = excluded.status,
+    last_seen = excluded.last_seen;
+
+allByStatus:
+SELECT * FROM user_word_state WHERE status = ?;
+
+countByStatus:
+SELECT status, COUNT(*) AS count FROM user_word_state GROUP BY status;

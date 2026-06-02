@@ -1,0 +1,16 @@
+CREATE TABLE IF NOT EXISTS token_cache (
+    text_id TEXT NOT NULL,
+    sentence_index INTEGER NOT NULL,
+    analysis TEXT NOT NULL,
+    PRIMARY KEY (text_id, sentence_index)
+);
+
+getCachedAnalysis:
+SELECT analysis FROM token_cache WHERE text_id = ? AND sentence_index = ?;
+
+insertAnalysis:
+INSERT OR REPLACE INTO token_cache (text_id, sentence_index, analysis)
+VALUES (?, ?, ?);
+
+deleteForText:
+DELETE FROM token_cache WHERE text_id = ?;

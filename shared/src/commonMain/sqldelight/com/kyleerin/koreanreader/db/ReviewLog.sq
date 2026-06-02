@@ -1,0 +1,19 @@
+CREATE TABLE IF NOT EXISTS review_log (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    lemma TEXT NOT NULL,
+    pos TEXT NOT NULL,
+    rating INTEGER NOT NULL,
+    reviewed_at INTEGER NOT NULL,
+    scheduled_days INTEGER NOT NULL DEFAULT 0,
+    elapsed_days INTEGER NOT NULL DEFAULT 0
+);
+
+insertLog:
+INSERT INTO review_log (lemma, pos, rating, reviewed_at, scheduled_days, elapsed_days)
+VALUES (?, ?, ?, ?, ?, ?);
+
+logsForCard:
+SELECT * FROM review_log
+WHERE lemma = ? AND pos = ?
+ORDER BY reviewed_at DESC
+LIMIT ?;

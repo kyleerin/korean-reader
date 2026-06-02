@@ -1,0 +1,29 @@
+CREATE TABLE IF NOT EXISTS imported_text (
+    id TEXT NOT NULL PRIMARY KEY,
+    title TEXT NOT NULL,
+    source_type TEXT NOT NULL,
+    content TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    last_read_position INTEGER NOT NULL DEFAULT 0
+);
+
+getAllTexts:
+SELECT id, title, source_type, created_at, last_read_position
+FROM imported_text
+ORDER BY created_at DESC;
+
+getTextById:
+SELECT * FROM imported_text WHERE id = ?;
+
+insertText:
+INSERT INTO imported_text (id, title, source_type, content, created_at, last_read_position)
+VALUES (?, ?, ?, ?, ?, 0);
+
+updateReadPosition:
+UPDATE imported_text SET last_read_position = ? WHERE id = ?;
+
+deleteText:
+DELETE FROM imported_text WHERE id = ?;
+
+count:
+SELECT COUNT(*) FROM imported_text;
