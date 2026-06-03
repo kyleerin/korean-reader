@@ -139,11 +139,17 @@ export function ReviewScreen({ reviewRepo, onBack }: Props) {
         {revealed ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             <hr style={{ border: 'none', borderTop: '1px solid var(--color-border)' }} />
-            <ol style={{ paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-              {current.definitions.slice(0, 3).map((def, i) => (
-                <li key={i} style={{ fontSize: '1rem' }}>{def}</li>
-              ))}
-            </ol>
+            {current.definitions.length > 0 ? (
+              <ol style={{ paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                {current.definitions.slice(0, 3).map((def, i) => (
+                  <li key={i} style={{ fontSize: '1rem' }}>{def}</li>
+                ))}
+              </ol>
+            ) : (
+              <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
+                No definition found in dictionary.
+              </p>
+            )}
             {current.examples && current.examples.length > 0 && (
               <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', fontStyle: 'italic' }}>
                 {current.examples[0]}
