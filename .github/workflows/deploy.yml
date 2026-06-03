@@ -32,9 +32,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build dictionary
-        run: npm run build:dict
-
       - name: Build app
         run: npm run build
         env:

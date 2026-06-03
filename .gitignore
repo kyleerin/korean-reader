@@ -7,8 +7,8 @@
 node_modules/
 dist/
 
-# Generated build artifacts
-public/dictionary.ndjson
+# Generated build artifacts (dictionary is committed — see scripts/build-dictionary.ts to regenerate)
+# public/dictionary.ndjson
 
 # macOS
 .DS_Store
