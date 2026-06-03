@@ -2,6 +2,8 @@
 
 A reading-immersion web app for Korean learners. Paste any Korean text, tap words for instant definitions and grammar breakdowns, mark what you know, and review with spaced repetition. Runs fully offline in the browser — no account required.
 
+<img width="743" height="1335" alt="image" src="https://github.com/user-attachments/assets/928c9c7c-aa7b-4efd-90e3-46b63af6477c" />
+
 ## Features
 
 - **Morphological analysis** — decomposes eojeols into stems, particles, and endings using [garu-ko](https://github.com/zerry-jin/garu-ko) (WASM, F1 93.7%)
