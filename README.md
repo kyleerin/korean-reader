@@ -1,0 +1,104 @@
+# Korean Reader
+
+A reading-immersion web app for Korean learners. Paste any Korean text, tap words for instant definitions and grammar breakdowns, mark what you know, and review with spaced repetition. Runs fully offline in the browser — no account required.
+
+## Features
+
+- **Morphological analysis** — decomposes eojeols into stems, particles, and endings using [garu-ko](https://github.com/zerry-jin/garu-ko) (WASM, F1 93.7%)
+- **Color-coded reading** — words colored by knowledge state: blue (new), amber (learning), grey (particles/endings), no highlight (known)
+- **Tap to define** — tap any word to see its dictionary form, definitions, and POS tag
+- **Live recoloring** — marking a word instantly recolors every occurrence in the current text
+- **Spaced repetition** — LEARNING words become flashcards, scheduled by [FSRS](https://github.com/open-spaced-repetition/fsrs4anki/wiki/The-Algorithm)
+- **Offline-first** — dictionary and analyzer are bundled; works without a network connection after first load
+
+## Getting started
+
+```bash
+npm install
+```
+
+Build the dictionary (downloads ~18 MB from Hugging Face, outputs `public/dictionary.ndjson`):
+
+```bash
+npm run build:dict
+```
+
+Start the dev server:
+
+```bash
+npm run dev
+```
+
+Open [http://localhost:5173](http://localhost:5173), paste Korean text, and start reading.
+
+## Scripts
+
+| Command | Description |
+|---|---|
+| `npm run dev` | Start the Vite dev server |
+| `npm run build` | Production build to `dist/` |
+| `npm run build:dict` | Download and convert the NIKL dictionary |
+| `npm test` | Run the Vitest test suite |
+| `npm run test:watch` | Run tests in watch mode |
+
+## How the reading pipeline works
+
+```
+raw text
+  → sentence segmentation
+  → garu-ko WASM morphological analysis
+      → morphemes + Sejong POS tags
+  → for each content morpheme (noun / verb / adjective / adverb):
+      → reconstruct dictionary form  (e.g. 먹었어요 → 먹다)
+      → look up in bundled KO→EN dictionary
+      → check knowledge state (keyed by lemma + POS)
+      → assign color + tappable span
+  → particles (조사) and endings (어미): rendered in grey, not tracked as vocab
+```
+
+Knowledge is tracked at the **lemma level**: knowing 먹다 counts whether the text shows 먹어요, 먹었어요, or 먹을.
+
+## Dictionary
+
+The bundled dictionary is sourced from the [NIKL Korean-English dictionary](https://huggingface.co/datasets/binjang/NIKL-korean-english-dictionary) (National Institute of Korean Language, MIT license). It contains ~47,000 entries with English definitions and usage examples.
+
+## Project structure
+
+```
+src/
+  analyzer/       garu-ko WASM adapter
+  components/     React UI (ImportScreen, Reader, ReviewScreen, TapPanel)
+  db/             SQLite WASM client + schema (for future OPFS persistence)
+  dictionary/     DictionaryRepository — ndjson loader and SQLite repo
+  domain/         Core types (KnowledgeState, PartOfSpeech, AnalyzedText, …)
+  knowledge/      KnowledgeRepository — localStorage-backed word state
+  pipeline/       ReadingPipeline — tokenizer, lemma reconstructor, classifier
+  review/         ReviewRepository — FSRS card storage (localStorage)
+scripts/
+  build-dictionary.ts   Downloads and converts the NIKL parquet file
+tests/
+  fakes/          In-memory test doubles (DbClient, analyzer, repos)
+  pipeline/       Unit tests for tokenizer, classifier, reconstructor, pipeline
+  db/             Integration tests for dictionary and knowledge repositories
+```
+
+## Tech stack
+
+| Concern | Choice |
+|---|---|
+| Framework | React 19 |
+| Build | Vite 6 + TypeScript |
+| Morphological analysis | garu-ko (WASM) |
+| Dictionary | NIKL KO→EN (ndjson) |
+| Spaced repetition | FSRS via ts-fsrs |
+| Persistence | localStorage (word states + review cards) |
+| Tests | Vitest |
+
+## Roadmap
+
+- [ ] Plain-text file import (`.txt`)
+- [ ] Conjugation / particle explainer in tap panel
+- [ ] OPFS-backed SQLite for text history and token cache
+- [ ] PWA manifest + Service Worker (installable, offline)
+- [ ] Text-to-speech (Web Speech API, `ko-KR`)
+- [ ] EPUB import

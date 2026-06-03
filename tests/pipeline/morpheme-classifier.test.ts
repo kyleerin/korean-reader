@@ -14,8 +14,11 @@ describe('classifyMorpheme', () => {
     expect(classifyMorpheme('VV')).toBe('CONTENT');
     expect(classifyMorpheme('VA')).toBe('CONTENT');
     expect(classifyMorpheme('VX')).toBe('CONTENT');
-    expect(classifyMorpheme('VCP')).toBe('CONTENT');
-    expect(classifyMorpheme('VCN')).toBe('CONTENT');
+  });
+
+  it('classifies copulas as PARTICLE (grammatical, not vocab)', () => {
+    expect(classifyMorpheme('VCP')).toBe('PARTICLE');
+    expect(classifyMorpheme('VCN')).toBe('PARTICLE');
   });
 
   it('classifies adverbs and determiners as CONTENT', () => {

@@ -113,7 +113,7 @@ function parseSetClause(clause: string, incoming: Row, existing: Row): Row {
   for (const part of clause.split(',')) {
     const m = /(\w+)\s*=\s*(.+)/.exec(part.trim());
     if (!m) continue;
-    const [, col, expr] = m as [string, string, string];
+    const [, col, expr] = m as unknown as [string, string, string];
     const e = expr.trim();
     if (e === 'excluded.' + col) {
       result[col] = incoming[col] ?? null;

@@ -12,6 +12,7 @@ export class SqliteWasmDbClient implements DbClient {
   private constructor(private readonly db: Sqlite3Db) {}
 
   static async open(path: ':memory:' | string): Promise<SqliteWasmDbClient> {
+    // @ts-expect-error — library types omit the optional config arg
     const sqlite3 = await sqlite3InitModule({ print: () => {}, printErr: () => {} });
     const db = new sqlite3.oo1.DB(path, 'ct') as Sqlite3Db;
     const client = new SqliteWasmDbClient(db);

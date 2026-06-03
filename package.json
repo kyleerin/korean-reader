@@ -13,12 +13,19 @@
   },
   "devDependencies": {
     "@dsnp/parquetjs": "^1.8.7",
+    "@types/react": "^19.2.16",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^4.7.0",
     "tsx": "^4.22.4",
     "typescript": "^5.6.3",
     "vite": "^6.0.0",
     "vitest": "^2.1.0"
   },
   "dependencies": {
-    "@sqlite.org/sqlite-wasm": "^3.53.0-build1"
+    "@sqlite.org/sqlite-wasm": "^3.53.0-build1",
+    "garu-ko": "^0.9.3",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "ts-fsrs": "^5.4.1"
   }
 }

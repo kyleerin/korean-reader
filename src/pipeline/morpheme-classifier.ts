@@ -4,12 +4,13 @@ import type { MorphemeType, PartOfSpeech } from '../domain/model';
 export function classifyMorpheme(pos: PartOfSpeech): MorphemeType {
   switch (pos) {
     case 'NN': case 'NNP': case 'NNB': case 'NP': case 'NR':
-    case 'VV': case 'VA': case 'VX': case 'VCP': case 'VCN':
+    case 'VV': case 'VA': case 'VX':
     case 'MM': case 'MAG': case 'MAJ': case 'IC': case 'XR':
       return 'CONTENT';
 
     case 'JKS': case 'JKC': case 'JKG': case 'JKO':
     case 'JKB': case 'JKV': case 'JKQ': case 'JX': case 'JC':
+    case 'VCP': case 'VCN':
       return 'PARTICLE';
 
     case 'EP': case 'EF': case 'EC': case 'ETN': case 'ETM':

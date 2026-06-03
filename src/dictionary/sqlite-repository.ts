@@ -1,4 +1,4 @@
-import type { DbClient } from '../db/client';
+import type { DbClient, SqlParam } from '../db/client';
 import type { DictionaryEntry, PartOfSpeech } from '../domain/model';
 import type { DictionaryRepository } from './repository';
 
@@ -22,7 +22,7 @@ export class SqliteDictionaryRepository implements DictionaryRepository {
   }
 }
 
-interface DictRow {
+interface DictRow extends Record<string, SqlParam> {
   lemma: string;
   pos: string;
   definitions: string;
