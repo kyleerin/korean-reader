@@ -45,6 +45,22 @@ export function segmentSentences(text: string): string[] {
   return result;
 }
 
+/**
+ * Splits raw text into paragraphs, each a list of sentences, so the reader can
+ * preserve the original block structure instead of running everything together.
+ *
+ * Paragraphs are delimited by blank lines when present; if the text has no blank
+ * lines but does use single newlines, each line becomes its own paragraph so the
+ * pasted structure is still preserved. Empty paragraphs are dropped.
+ */
+export function segmentParagraphs(text: string): string[][] {
+  const splitter = /\n[ \t]*\n/.test(text) ? /\n[ \t]*\n+/ : /\n+/;
+  return text
+    .split(splitter)
+    .map(block => segmentSentences(block))
+    .filter(sentences => sentences.length > 0);
+}
+
 export function splitEojeols(text: string): string[] {
   return text.split(WHITESPACE).filter(t => t.length > 0);
 }

@@ -1,10 +1,10 @@
 import type { DictionaryRepository } from '../dictionary/repository';
-import type { AnalyzedEojeol, AnalyzedMorpheme, AnalyzedSentence, AnalyzedText, Morpheme } from '../domain/model';
+import type { AnalyzedEojeol, AnalyzedMorpheme, AnalyzedParagraph, AnalyzedSentence, AnalyzedText, Morpheme } from '../domain/model';
 import type { KnowledgeRepository } from '../knowledge/repository';
 import type { EojeolMorphemes, MorphologicalAnalyzer } from './analyzer';
 import { reconstructLemma } from './lemma-reconstructor';
 import { classifyMorpheme } from './morpheme-classifier';
-import { segmentSentences } from './tokenizer';
+import { segmentParagraphs } from './tokenizer';
 
 /**
  * Orchestrates the full reading pipeline:
@@ -22,7 +22,14 @@ export class ReadingPipeline {
   ) {}
 
   async analyze(text: string): Promise<AnalyzedText> {
-    const sentences = segmentSentences(text);
+    const paragraphs = await Promise.all(
+      segmentParagraphs(text).map(s => this.analyzeParagraph(s)),
+    );
+    const sentences = paragraphs.flatMap(p => p.sentences);
+    return { paragraphs, sentences };
+  }
+
+  private async analyzeParagraph(sentences: string[]): Promise<AnalyzedParagraph> {
     const analyzed = await Promise.all(sentences.map(s => this.analyzeSentence(s)));
     return { sentences: analyzed };
   }

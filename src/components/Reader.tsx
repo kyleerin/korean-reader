@@ -206,20 +206,24 @@ export function Reader({ text, knowledge, reviewRepo, onBack }: Props) {
         </span>
       </div>
 
-      <div style={{ fontSize: '1.1rem', lineHeight: 2, letterSpacing: '0.02em' }}>
-        {text.sentences.map((sentence, si) => (
-          <span key={si}>
-            {sentence.eojeols.map((eojeol, ei) => (
-              <span key={ei}>
-                {needsFallback(eojeol)
-                  ? <FallbackEojeol eojeol={eojeol} knowledge={knowledge} onTap={(m, s) => setSelected({ morpheme: m, state: s })} />
-                  : <StandardEojeol eojeol={eojeol} knowledge={knowledge} onTap={(m, s) => setSelected({ morpheme: m, state: s })} />
-                }
-                {ei < sentence.eojeols.length - 1 ? ' ' : ''}
+      <div style={{ fontSize: '1.1rem', lineHeight: 2, letterSpacing: '0.02em', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        {text.paragraphs.map((paragraph, pi) => (
+          <p key={pi} style={{ margin: 0 }}>
+            {paragraph.sentences.map((sentence, si) => (
+              <span key={si}>
+                {sentence.eojeols.map((eojeol, ei) => (
+                  <span key={ei}>
+                    {needsFallback(eojeol)
+                      ? <FallbackEojeol eojeol={eojeol} knowledge={knowledge} onTap={(m, s) => setSelected({ morpheme: m, state: s })} />
+                      : <StandardEojeol eojeol={eojeol} knowledge={knowledge} onTap={(m, s) => setSelected({ morpheme: m, state: s })} />
+                    }
+                    {ei < sentence.eojeols.length - 1 ? ' ' : ''}
+                  </span>
+                ))}
+                {' '}
               </span>
             ))}
-            {' '}
-          </span>
+          </p>
         ))}
       </div>
 

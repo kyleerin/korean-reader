@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { segmentSentences, splitEojeols } from '../../src/pipeline/tokenizer';
+import { segmentParagraphs, segmentSentences, splitEojeols } from '../../src/pipeline/tokenizer';
 
 describe('segmentSentences', () => {
   it('returns single sentence without punctuation', () => {
@@ -41,6 +41,31 @@ describe('segmentSentences', () => {
   it('does not produce empty sentences from trailing ellipsis', () => {
     const result = segmentSentences('그래서... 모르겠어요.');
     expect(result.every(s => s.trim().length > 0)).toBe(true);
+  });
+});
+
+describe('segmentParagraphs', () => {
+  it('splits paragraphs on blank lines', () => {
+    const result = segmentParagraphs('첫 문단. 같은 문단.\n\n둘째 문단.');
+    expect(result).toHaveLength(2);
+    expect(result[0]).toEqual(['첫 문단.', '같은 문단.']);
+    expect(result[1]).toEqual(['둘째 문단.']);
+  });
+
+  it('treats each line as a paragraph when there are no blank lines', () => {
+    const result = segmentParagraphs('첫 줄\n둘째 줄');
+    expect(result).toEqual([['첫 줄'], ['둘째 줄']]);
+  });
+
+  it('keeps single newlines inside a blank-line paragraph as sentences', () => {
+    const result = segmentParagraphs('한 문장\n다른 문장\n\n다음 문단');
+    expect(result).toHaveLength(2);
+    expect(result[0]).toEqual(['한 문장', '다른 문장']);
+  });
+
+  it('drops empty paragraphs', () => {
+    expect(segmentParagraphs('')).toEqual([]);
+    expect(segmentParagraphs('\n\n   \n\n')).toEqual([]);
   });
 });
 

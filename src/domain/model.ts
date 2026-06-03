@@ -59,7 +59,13 @@ export interface AnalyzedSentence {
   readonly eojeols: readonly AnalyzedEojeol[];
 }
 
+export interface AnalyzedParagraph {
+  readonly sentences: readonly AnalyzedSentence[];
+}
+
 export interface AnalyzedText {
+  readonly paragraphs: readonly AnalyzedParagraph[];
+  /** Flattened view across all paragraphs — convenience for stats and lookups. */
   readonly sentences: readonly AnalyzedSentence[];
 }
 
