@@ -1,6 +1,7 @@
 # Korean Reader
 
 [![License: Polyform Noncommercial](https://img.shields.io/badge/license-Polyform%20NC-blue)](LICENSE)
+[![Ko-fi](https://img.shields.io/badge/support-Ko--fi-FF5E5B?logo=ko-fi)](https://ko-fi.com/kyleerin)
 
 A reading-immersion web app for Korean learners. Paste any Korean text, tap words for instant definitions and grammar breakdowns, mark what you know, and review with spaced repetition. Runs fully offline in the browser — no account required.
 
