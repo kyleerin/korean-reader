@@ -8,9 +8,12 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "build:dict": "tsx scripts/build-dictionary.ts"
   },
   "devDependencies": {
+    "@dsnp/parquetjs": "^1.8.7",
+    "tsx": "^4.22.4",
     "typescript": "^5.6.3",
     "vite": "^6.0.0",
     "vitest": "^2.1.0"

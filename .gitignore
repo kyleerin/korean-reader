@@ -7,6 +7,9 @@
 node_modules/
 dist/
 
+# Generated build artifacts
+public/dictionary.ndjson
+
 # macOS
 .DS_Store
 .AppleDouble
