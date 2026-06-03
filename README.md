@@ -106,3 +106,9 @@ tests/
 - [ ] PWA manifest + Service Worker (installable, offline)
 - [ ] Text-to-speech (Web Speech API, `ko-KR`)
 - [ ] EPUB import
+
+## License
+
+[Polyform Noncommercial 1.0.0](LICENSE) — free to use, fork, and modify for any non-commercial purpose. Commercial use is not permitted.
+
+The bundled dictionary is derived from the [NIKL Korean-English dictionary](https://huggingface.co/datasets/binjang/NIKL-korean-english-dictionary), licensed MIT by the National Institute of Korean Language (국립국어원).
