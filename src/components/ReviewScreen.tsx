@@ -34,6 +34,8 @@ export function ReviewScreen({ reviewRepo, onBack }: Props) {
   const [revealed, setRevealed] = useState(false);
   const [reviewed, setReviewed] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
 
   useEffect(() => {
     reviewRepo.getDue(new Date()).then(cards => {
@@ -69,6 +71,25 @@ export function ReviewScreen({ reviewRepo, onBack }: Props) {
     });
 
     setRevealed(false);
+    setEditing(false);
+  }
+
+  function startEdit() {
+    if (!current) return;
+    setDraft(current.definitions.join('\n'));
+    setEditing(true);
+  }
+
+  async function saveEdit() {
+    if (!current) return;
+    const definitions = draft.split('\n').map(d => d.trim()).filter(Boolean);
+    const updated: ReviewCard = { ...current, definitions };
+    await reviewRepo.saveCard(updated);
+    setCurrent(updated);
+    setQueue(prev => prev.map(c =>
+      c.lemma === updated.lemma && c.pos === updated.pos ? updated : c,
+    ));
+    setEditing(false);
   }
 
   if (loading) {
@@ -139,21 +160,63 @@ export function ReviewScreen({ reviewRepo, onBack }: Props) {
         {revealed ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             <hr style={{ border: 'none', borderTop: '1px solid var(--color-border)' }} />
-            {current.definitions.length > 0 ? (
-              <ol style={{ paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                {current.definitions.slice(0, 3).map((def, i) => (
-                  <li key={i} style={{ fontSize: '1rem' }}>{def}</li>
-                ))}
-              </ol>
+            {editing ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <textarea
+                  value={draft}
+                  onChange={e => setDraft(e.target.value)}
+                  rows={Math.max(3, draft.split('\n').length)}
+                  autoFocus
+                  placeholder="One definition per line"
+                  style={{
+                    width: '100%',
+                    fontSize: '1rem',
+                    fontFamily: 'inherit',
+                    padding: '0.5rem',
+                    borderRadius: '6px',
+                    background: 'var(--color-bg)',
+                    color: 'var(--color-text)',
+                    border: '1px solid var(--color-border)',
+                    resize: 'vertical',
+                  }}
+                />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', flex: 1 }}>
+                    One definition per line.
+                  </span>
+                  <button onClick={() => setEditing(false)} style={{ background: 'transparent', color: 'var(--color-text-muted)' }}>
+                    Cancel
+                  </button>
+                  <button onClick={saveEdit} style={{ background: 'var(--color-new)', color: '#fff' }}>
+                    Save
+                  </button>
+                </div>
+              </div>
             ) : (
-              <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
-                No definition found in dictionary.
-              </p>
-            )}
-            {current.examples && current.examples.length > 0 && (
-              <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', fontStyle: 'italic' }}>
-                {current.examples[0]}
-              </p>
+              <>
+                {current.definitions.length > 0 ? (
+                  <ol style={{ paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                    {current.definitions.slice(0, 3).map((def, i) => (
+                      <li key={i} style={{ fontSize: '1rem' }}>{def}</li>
+                    ))}
+                  </ol>
+                ) : (
+                  <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
+                    No definition found in dictionary.
+                  </p>
+                )}
+                {current.examples && current.examples.length > 0 && (
+                  <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', fontStyle: 'italic' }}>
+                    {current.examples[0]}
+                  </p>
+                )}
+                <button
+                  onClick={startEdit}
+                  style={{ alignSelf: 'flex-start', background: 'transparent', color: 'var(--color-text-muted)', fontSize: '0.8rem', padding: '0.25rem 0' }}
+                >
+                  ✎ Edit definition
+                </button>
+              </>
             )}
           </div>
         ) : (
