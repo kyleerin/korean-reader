@@ -15,7 +15,7 @@ export class NdjsonDictionaryRepository implements DictionaryRepository {
     }
   }
 
-  static async load(url = '/dictionary.ndjson'): Promise<NdjsonDictionaryRepository> {
+  static async load(url = `${import.meta.env.BASE_URL}dictionary.ndjson`): Promise<NdjsonDictionaryRepository> {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`Failed to load dictionary: HTTP ${res.status}`);
     const text = await res.text();
