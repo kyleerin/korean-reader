@@ -25,10 +25,15 @@ function hasBarejamo(s: string): boolean {
   return /[ㄱ-ㅣᄀ-ᇿ]/.test(s);
 }
 
-// True if ANY morpheme in this eojeol has a bare-jamo surface.
-// In that case we must render the whole eojeol surface as one text node.
+// True when we must render the whole eojeol surface as one text node instead of
+// stitching morpheme surfaces together. Two cases:
+//   1. A morpheme has a bare-jamo surface (can't form a syllable block alone).
+//   2. The morpheme surfaces don't reconstruct the original eojeol — e.g. the
+//      analyzer decomposes 했 into 하 + 았, so joining them yields 대답하았습니다
+//      instead of 대답했습니다. Render the true surface to avoid mangled text.
 function needsFallback(eojeol: AnalyzedEojeol): boolean {
-  return eojeol.morphemes.some(m => hasBarejamo(m.surface));
+  if (eojeol.morphemes.some(m => hasBarejamo(m.surface))) return true;
+  return eojeol.morphemes.map(m => m.surface).join('') !== eojeol.surface;
 }
 
 // ── Single content-morpheme span (tappable, live color) ──────────────────────
@@ -84,8 +89,34 @@ function StandardEojeol({
   );
 }
 
-// ── Fallback: bare-jamo present, render full eojeol surface as one text node ──
-// Color by the dominant content-morpheme state; still tappable.
+interface Segment { text: string; color?: string }
+
+// Splits the true eojeol surface into colored segments. We peel morphemes off
+// the right as long as each one's surface matches the end of the remaining text:
+// grammatical endings/particles become grey, trailing punctuation keeps the
+// default color. Peeling stops at the first content/affix morpheme — its surface
+// may be fused into the preceding syllable (e.g. 했 = 하/XSV + 았/EP), so it stays
+// in the colored `head` as one tappable unit. Example: 대답했습니다. →
+// [대답했 (state color)] [습니다 (grey)] [. (default)].
+function fallbackSegments(eojeol: AnalyzedEojeol, headColor: string | undefined): Segment[] {
+  const tail: Segment[] = [];
+  let head = eojeol.surface;
+  for (let i = eojeol.morphemes.length - 1; i >= 0; i--) {
+    const m = eojeol.morphemes[i]!;
+    let segColor: string | undefined;
+    if (m.type === 'PARTICLE' || m.type === 'ENDING') segColor = 'var(--color-text-muted)';
+    else if (m.type === 'PUNCTUATION' || m.type === 'FOREIGN' || m.type === 'UNKNOWN') segColor = undefined;
+    else break; // CONTENT / AFFIX — may be fused into the stem; keep in head.
+    if (!head.endsWith(m.surface) || head.length === m.surface.length) break;
+    head = head.slice(0, head.length - m.surface.length);
+    tail.unshift({ text: m.surface, color: segColor });
+  }
+  return [{ text: head, color: headColor }, ...tail];
+}
+
+// ── Fallback: morpheme surfaces don't cleanly reconstruct the eojeol ──────────
+// Render the true surface; color the content head by dominant state, grey the
+// trailing grammatical endings. Still tappable.
 function FallbackEojeol({
   eojeol,
   knowledge,
@@ -128,9 +159,13 @@ function FallbackEojeol({
     onTap(primary, state);
   }
 
+  const segments = fallbackSegments(eojeol, color);
+
   return (
-    <span onClick={handleClick} style={{ color, cursor: 'pointer' }}>
-      {eojeol.surface}
+    <span onClick={handleClick} style={{ cursor: 'pointer' }}>
+      {segments.map((seg, i) => (
+        <span key={i} style={{ color: seg.color }}>{seg.text}</span>
+      ))}
     </span>
   );
 }
