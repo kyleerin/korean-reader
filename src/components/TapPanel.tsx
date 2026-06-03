@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import type { AnalyzedMorpheme, KnowledgeState, PartOfSpeech } from '../domain/model';
 
 interface Props {
@@ -122,6 +123,26 @@ function buildBreakdown(morpheme: AnalyzedMorpheme): BreakdownItem[] | null {
 export function TapPanel({ morpheme, currentState, onMark, onClose }: Props) {
   const breakdown = buildBreakdown(morpheme);
 
+  // Keyboard shortcuts: 1-4 mark the matching button, Escape closes the panel.
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return;
+
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+      const index = Number(e.key) - 1;
+      const button = STATE_BUTTONS[index];
+      if (!button) return;
+      e.preventDefault();
+      onMark(button.state);
+    }
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [onMark, onClose]);
+
   return (
     <div style={{
       position: 'fixed',
@@ -184,7 +205,7 @@ export function TapPanel({ morpheme, currentState, onMark, onClose }: Props) {
       )}
 
       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-        {STATE_BUTTONS.map(({ state, label, bg }) => (
+        {STATE_BUTTONS.map(({ state, label, bg }, i) => (
           <button
             key={state}
             onClick={() => onMark(state)}
@@ -196,6 +217,7 @@ export function TapPanel({ morpheme, currentState, onMark, onClose }: Props) {
               minWidth: '5rem',
             }}
           >
+            <span style={{ opacity: 0.6, marginRight: '0.35rem' }}>{i + 1}</span>
             {label}
           </button>
         ))}
