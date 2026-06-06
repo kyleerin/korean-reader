@@ -1,14 +1,8 @@
-import { OAuth2Client } from 'google-auth-library';
+import { randomUUID } from 'node:crypto';
+import { hashPassword, verifyPassword } from './password.js';
 import type { SessionUser } from './session.js';
-
-export interface GoogleAuthConfig {
-  clientId: string;
-}
-
-export interface GoogleAuthDeps {
-  client?: OAuth2Client;
-  config: GoogleAuthConfig;
-}
+import type { UserStore } from './users.js';
+import { validateEmail, validateName, validatePassword } from './validation.js';
 
 export class AuthError extends Error {
   constructor(
@@ -20,26 +14,54 @@ export class AuthError extends Error {
   }
 }
 
-export async function verifyGoogleCredential(
-  credential: string,
-  deps: GoogleAuthDeps,
-): Promise<SessionUser> {
-  if (!credential.trim()) throw new AuthError('Google credential is required.', 400);
+export function toSessionUser(record: { id: string; email: string; name: string }): SessionUser {
+  return {
+    id: record.id,
+    email: record.email,
+    name: record.name,
+  };
+}
 
-  const client = deps.client ?? new OAuth2Client(deps.config.clientId);
-  const ticket = await client.verifyIdToken({
-    idToken: credential,
-    audience: deps.config.clientId,
-  });
-  const payload = ticket.getPayload();
-  if (!payload?.sub || !payload.email) {
-    throw new AuthError('Invalid Google credential.', 401);
+export async function registerUser(
+  store: UserStore,
+  input: { email: string; password: string; name?: unknown },
+): Promise<SessionUser> {
+  const email = validateEmail(input.email);
+  const password = validatePassword(input.password);
+  const name = validateName(input.name, email);
+
+  if (store.findByEmail(email)) {
+    throw new AuthError('An account with this email already exists.', 409);
   }
 
-  return {
-    id: payload.sub,
-    email: payload.email,
-    name: payload.name ?? payload.email,
-    picture: payload.picture,
+  const user = {
+    id: randomUUID(),
+    email,
+    name,
+    password_hash: await hashPassword(password),
+    created_at: new Date().toISOString(),
   };
+
+  try {
+    store.create(user);
+  } catch {
+    throw new AuthError('An account with this email already exists.', 409);
+  }
+
+  return toSessionUser(user);
+}
+
+export async function loginUser(
+  store: UserStore,
+  input: { email: string; password: string },
+): Promise<SessionUser> {
+  const email = validateEmail(input.email);
+  const password = validatePassword(input.password);
+
+  const record = store.findByEmail(email);
+  if (!record || !(await verifyPassword(password, record.password_hash))) {
+    throw new AuthError('Invalid email or password.', 401);
+  }
+
+  return toSessionUser(record);
 }

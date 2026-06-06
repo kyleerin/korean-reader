@@ -21,3 +21,6 @@ dist/
 
 # Secrets / local config
 *.env
+
+# Local SQLite user database
+data/

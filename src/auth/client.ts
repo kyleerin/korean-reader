@@ -17,11 +17,24 @@ export async function fetchCurrentUser(): Promise<User | null> {
   return payload.user ?? null;
 }
 
-export async function signInWithGoogle(credential: string): Promise<User> {
-  const payload = await apiJson<{ user: User }>('/api/auth/google', {
+export async function register(
+  email: string,
+  password: string,
+  name?: string,
+): Promise<User> {
+  const payload = await apiJson<{ user: User }>('/api/auth/register', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ credential }),
+    body: JSON.stringify({ email, password, name }),
+  });
+  return payload.user;
+}
+
+export async function login(email: string, password: string): Promise<User> {
+  const payload = await apiJson<{ user: User }>('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
   });
   return payload.user;
 }

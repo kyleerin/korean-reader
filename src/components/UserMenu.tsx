@@ -1,24 +1,16 @@
-import { GoogleLogin, type CredentialResponse } from '@react-oauth/google';
+import { useState } from 'react';
 import { useAuth } from '../auth/AuthProvider';
+import { AuthModal } from './AuthModal';
 
 export function UserMenu() {
-  const { enabled, loading, user, signIn, signOut } = useAuth();
+  const { enabled, loading, user, signOut } = useAuth();
+  const [showAuth, setShowAuth] = useState(false);
 
   if (!enabled || loading) return null;
 
   if (user) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginLeft: 'auto' }}>
-        {user.picture && (
-          <img
-            src={user.picture}
-            alt=""
-            width={28}
-            height={28}
-            style={{ borderRadius: '50%' }}
-            referrerPolicy="no-referrer"
-          />
-        )}
         <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', maxWidth: '12rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {user.name}
         </span>
@@ -39,19 +31,23 @@ export function UserMenu() {
   }
 
   return (
-    <div style={{ marginLeft: 'auto' }}>
-      <GoogleLogin
-        onSuccess={(response: CredentialResponse) => {
-          if (response.credential) void signIn(response.credential);
-        }}
-        onError={() => {
-          console.error('Google sign-in failed');
-        }}
-        theme="filled_black"
-        size="medium"
-        text="signin_with"
-        shape="rectangular"
-      />
-    </div>
+    <>
+      <div style={{ marginLeft: 'auto' }}>
+        <button
+          type="button"
+          onClick={() => setShowAuth(true)}
+          style={{
+            background: 'var(--color-surface)',
+            color: 'var(--color-text)',
+            border: '1px solid var(--color-border)',
+            padding: '0.35rem 0.85rem',
+            fontSize: '0.85rem',
+          }}
+        >
+          Sign in
+        </button>
+      </div>
+      {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
+    </>
   );
 }

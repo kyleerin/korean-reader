@@ -1,4 +1,3 @@
-import { GoogleOAuthProvider } from '@react-oauth/google';
 import {
   createContext,
   useCallback,
@@ -11,7 +10,8 @@ import {
 import {
   fetchAuthConfig,
   fetchCurrentUser,
-  signInWithGoogle,
+  login,
+  register,
   signOut,
 } from './client';
 import type { User } from './types';
@@ -20,7 +20,8 @@ interface AuthContextValue {
   enabled: boolean;
   loading: boolean;
   user: User | null;
-  signIn: (credential: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, name?: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -28,7 +29,6 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [enabled, setEnabled] = useState(false);
-  const [googleClientId, setGoogleClientId] = useState<string | undefined>();
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
 
@@ -40,9 +40,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (cancelled) return;
 
       setEnabled(config.enabled);
-      setGoogleClientId(
-        config.googleClientId ?? import.meta.env.VITE_GOOGLE_CLIENT_ID ?? undefined,
-      );
 
       if (!config.enabled) {
         setUser(null);
@@ -64,8 +61,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => { cancelled = true; };
   }, []);
 
-  const signIn = useCallback(async (credential: string) => {
-    const signedIn = await signInWithGoogle(credential);
+  const handleLogin = useCallback(async (email: string, password: string) => {
+    const signedIn = await login(email, password);
+    setUser(signedIn);
+  }, []);
+
+  const handleRegister = useCallback(async (email: string, password: string, name?: string) => {
+    const signedIn = await register(email, password, name);
     setUser(signedIn);
   }, []);
 
@@ -78,23 +80,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     enabled,
     loading,
     user,
-    signIn,
+    login: handleLogin,
+    register: handleRegister,
     signOut: handleSignOut,
-  }), [enabled, loading, user, signIn, handleSignOut]);
+  }), [enabled, loading, user, handleLogin, handleRegister, handleSignOut]);
 
-  if (!enabled) {
-    return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-  }
-
-  if (!googleClientId) {
-    return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-  }
-
-  return (
-    <GoogleOAuthProvider clientId={googleClientId}>
-      <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
-    </GoogleOAuthProvider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth(): AuthContextValue {

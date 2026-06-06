@@ -4,7 +4,7 @@
 
 ### Product overview
 
-Korean Reader is a React SPA with an optional Node API server. Reading/analysis is offline in the browser (`localStorage`). The API server provides Google sign-in and optional DeepL full-text translation.
+Korean Reader is a React SPA with an optional Node API server. Reading/analysis is offline in the browser (`localStorage`). The API server provides email + password sign-in (SQLite) and optional DeepL full-text translation.
 
 ### Services
 
@@ -14,7 +14,7 @@ Korean Reader is a React SPA with an optional Node API server. Reading/analysis 
 | API server | `npm run dev:api` | http://localhost:3001 |
 | Web + API | `npm run dev:full` | Vite + API together |
 
-Copy `.env.example` → `.env`. For Google sign-in set `GOOGLE_CLIENT_ID`, `VITE_GOOGLE_CLIENT_ID`, and `SESSION_SECRET`. For translation, set `DEEPL_API_KEY`. Vite proxies `/api` → port 3001 in dev. API requests use cookies (`credentials: 'include'`).
+Copy `.env.example` → `.env`. For sign-in set `SESSION_SECRET` (users are stored in SQLite at `DATABASE_PATH`, default `./data/korean-reader.db`). For translation, set `DEEPL_API_KEY`. Vite proxies `/api` → port 3001 in dev. API requests use cookies (`credentials: 'include'`).
 
 `public/dictionary.ndjson` is pre-committed (~17 MB); `npm run build:dict` is only needed if rebuilding the dictionary from Hugging Face.
 
