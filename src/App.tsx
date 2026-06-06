@@ -17,7 +17,7 @@ type AppState =
   | { phase: 'loading'; message: string }
   | { phase: 'home'; dict: DictionaryRepository; analyzer: MorphologicalAnalyzer; knowledge: KnowledgeRepository; reviewRepo: ReviewRepository }
   | { phase: 'analyzing' }
-  | { phase: 'reading'; text: AnalyzedText; dict: DictionaryRepository; analyzer: MorphologicalAnalyzer; knowledge: KnowledgeRepository; reviewRepo: ReviewRepository }
+  | { phase: 'reading'; text: AnalyzedText; sourceText: string; dict: DictionaryRepository; analyzer: MorphologicalAnalyzer; knowledge: KnowledgeRepository; reviewRepo: ReviewRepository }
   | { phase: 'review'; knowledge: KnowledgeRepository; reviewRepo: ReviewRepository }
   | { phase: 'error'; message: string };
 
@@ -63,7 +63,7 @@ export function App() {
     setState({ phase: 'analyzing' });
     try {
       const analyzed = await new ReadingPipeline(analyzer, dict, knowledge).analyze(rawText);
-      setState({ phase: 'reading', text: analyzed, dict, analyzer, knowledge, reviewRepo });
+      setState({ phase: 'reading', text: analyzed, sourceText: rawText, dict, analyzer, knowledge, reviewRepo });
     } catch (err) {
       setState({ phase: 'error', message: err instanceof Error ? err.message : String(err) });
     }
@@ -106,6 +106,7 @@ export function App() {
   return (
     <Reader
       text={state.text}
+      sourceText={state.sourceText}
       knowledge={state.knowledge}
       reviewRepo={state.reviewRepo}
       onBack={goHome}
