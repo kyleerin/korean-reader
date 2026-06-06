@@ -18,6 +18,28 @@ export function isTranslationAvailable(): boolean {
   return getDeepLApiKey() !== null;
 }
 
+export async function validateDeepLApiKeyClient(rawKey: string): Promise<string> {
+  const res = await fetch(`${apiBase()}/api/validate-deepl-key`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ apiKey: rawKey }),
+  });
+
+  const payload = await res.json().catch(() => ({})) as { ok?: boolean; apiKey?: string; error?: string };
+  if (!res.ok) {
+    throw new TranslationClientError(
+      payload.error ?? `Could not validate API key (${res.status})`,
+      res.status,
+    );
+  }
+
+  if (!payload.apiKey) {
+    throw new TranslationClientError('Invalid validation response.', 502);
+  }
+
+  return payload.apiKey;
+}
+
 export async function fetchAiTranslation(text: string, apiKey: string): Promise<string> {
   const res = await fetch(`${apiBase()}/api/translate`, {
     method: 'POST',

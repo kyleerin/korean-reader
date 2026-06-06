@@ -1,3 +1,5 @@
+import { apiBasesForKey, formatDeepLAuthError, normalizeDeepLApiKey } from './deepl-key.js';
+
 export const MAX_TRANSLATION_CHARS = 12_000;
 
 export interface DeepLConfig {
@@ -46,7 +48,8 @@ export async function translateKoreanText(
 ): Promise<string> {
   const input = validateTranslationInput(text);
   const fetchFn = deps.fetchFn ?? fetch;
-  const apiBase = deeplApiBase(deps.config.apiKey, deps.config.apiBase);
+  const apiKey = normalizeDeepLApiKey(deps.config.apiKey);
+  const bases = apiBasesForKey(apiKey, deps.config.apiBase);
   const sourceLang = deps.config.sourceLang ?? 'KO';
   const targetLang = deps.config.targetLang ?? 'EN-US';
 
@@ -56,27 +59,32 @@ export async function translateKoreanText(
     target_lang: targetLang,
   });
 
-  const response = await fetchFn(`${apiBase}/v2/translate`, {
-    method: 'POST',
-    headers: {
-      Authorization: `DeepL-Auth-Key ${deps.config.apiKey}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: body.toString(),
-  });
+  let lastError: TranslationError | undefined;
 
-  if (!response.ok) {
+  for (const apiBase of bases) {
+    const response = await fetchFn(`${apiBase}/v2/translate`, {
+      method: 'POST',
+      headers: {
+        Authorization: `DeepL-Auth-Key ${apiKey}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: body.toString(),
+    });
+
+    if (response.ok) {
+      const payload = await response.json() as {
+        translations?: { text?: string }[];
+      };
+      const parts = payload.translations?.map(t => t.text?.trim()).filter(Boolean) as string[] | undefined;
+      if (!parts?.length) throw new TranslationError('Empty translation response.', 502);
+      return parts.join('\n\n');
+    }
+
     const detail = await response.text().catch(() => '');
-    throw new TranslationError(
-      `Translation provider error (${response.status})${detail ? `: ${detail.slice(0, 200)}` : ''}`,
-      response.status === 429 ? 429 : 502,
-    );
+    const status = response.status === 429 ? 429 : response.status === 403 ? 403 : 502;
+    lastError = new TranslationError(formatDeepLAuthError(response.status, detail), status);
+    if (response.status !== 403 || bases.length === 1) break;
   }
 
-  const payload = await response.json() as {
-    translations?: { text?: string }[];
-  };
-  const parts = payload.translations?.map(t => t.text?.trim()).filter(Boolean) as string[] | undefined;
-  if (!parts?.length) throw new TranslationError('Empty translation response.', 502);
-  return parts.join('\n\n');
+  throw lastError ?? new TranslationError('Translation failed.', 502);
 }

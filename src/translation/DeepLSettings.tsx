@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from 'react';
 import { clearDeepLApiKey, getDeepLApiKey, setDeepLApiKey } from './storage';
+import { validateDeepLApiKeyClient } from './client';
 
 interface DeepLSettingsContextValue {
   apiKey: string | null;
@@ -45,15 +46,26 @@ function DeepLSettingsModal({
 }) {
   const [value, setValue] = useState(initialValue);
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     const trimmed = value.trim();
     if (!trimmed) {
       setError('API key is required.');
       return;
     }
-    onSave(trimmed);
+
+    setError(null);
+    setSubmitting(true);
+    try {
+      const normalized = await validateDeepLApiKeyClient(trimmed);
+      onSave(normalized);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not validate API key.');
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -88,10 +100,14 @@ function DeepLSettingsModal({
           DeepL API key
         </h2>
         <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginBottom: '1rem', lineHeight: 1.5 }}>
-          Saved in this browser only. Used for full-text translation below your reading.
+          Saved in this browser only. Get a key from{' '}
+          <a href="https://www.deepl.com/pro-account/keys" target="_blank" rel="noreferrer" style={{ color: 'var(--color-new)' }}>
+            DeepL API keys
+          </a>
+          . Free keys end with <code style={{ fontSize: '0.8em' }}>:fx</code> — paste the full key, not your login password.
         </p>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={e => { void handleSubmit(e); }}>
           <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--color-text-muted)', marginBottom: '0.75rem' }}>
             API key
             <input
@@ -112,9 +128,10 @@ function DeepLSettingsModal({
 
           <button
             type="submit"
+            disabled={submitting}
             style={{ width: '100%', background: 'var(--color-new)', color: '#fff', marginBottom: '0.5rem' }}
           >
-            Save
+            {submitting ? 'Checking key…' : 'Save'}
           </button>
         </form>
 

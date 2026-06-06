@@ -1,5 +1,5 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
-import { processTranslateRequest } from './translate-route.js';
+import { processTranslateRequest, processValidateKeyRequest } from './translate-route.js';
 
 const PORT = Number(process.env.PORT ?? 3001);
 const API_BASE = process.env.DEEPL_API_URL;
@@ -24,31 +24,37 @@ async function readJsonBody(req: IncomingMessage): Promise<unknown> {
   return JSON.parse(raw) as unknown;
 }
 
+const routes: Record<string, (body: unknown) => ReturnType<typeof processTranslateRequest>> = {
+  '/api/translate': body => processTranslateRequest(body as Parameters<typeof processTranslateRequest>[0], {
+    apiBase: API_BASE,
+    sourceLang: SOURCE_LANG,
+    targetLang: TARGET_LANG,
+  }),
+  '/api/validate-deepl-key': body => processValidateKeyRequest(body as Parameters<typeof processValidateKeyRequest>[0]),
+};
+
 const server = createServer(async (req, res) => {
   if (req.method === 'OPTIONS') {
     sendJson(res, 204, {});
     return;
   }
 
-  if (req.method !== 'POST' || req.url !== '/api/translate') {
+  const route = req.url ? routes[req.url] : undefined;
+  if (req.method !== 'POST' || !route) {
     sendJson(res, 404, { error: 'Not found' });
     return;
   }
 
   try {
     const body = await readJsonBody(req);
-    const result = await processTranslateRequest(body as Parameters<typeof processTranslateRequest>[0], {
-      apiBase: API_BASE,
-      sourceLang: SOURCE_LANG,
-      targetLang: TARGET_LANG,
-    });
+    const result = await route(body);
     sendJson(res, result.status, result.body);
   } catch (err) {
     if (err instanceof SyntaxError) {
       sendJson(res, 400, { error: 'Invalid JSON body.' });
       return;
     }
-    console.error('Translation error:', err);
+    console.error('API error:', err);
     sendJson(res, 500, { error: 'Internal server error.' });
   }
 });

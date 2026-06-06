@@ -60,6 +60,6 @@ describe('translateKoreanText', () => {
 
     await expect(
       translateKoreanText('안녕', { fetchFn, config: { apiKey: 'bad:fx' } }),
-    ).rejects.toMatchObject({ status: 502 });
+    ).rejects.toMatchObject({ status: 403 });
   });
 });

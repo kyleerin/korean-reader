@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { processTranslateRequest } from '../../server/translate-route';
+import { processTranslateRequest, processValidateKeyRequest } from '../../server/translate-route';
 
 describe('processTranslateRequest', () => {
   it('rejects missing text', async () => {
@@ -24,6 +24,16 @@ describe('processTranslateRequest', () => {
     });
 
     expect(result).toEqual({ status: 200, body: { translation: 'Hello.' } });
+    vi.unstubAllGlobals();
+  });
+});
+
+describe('processValidateKeyRequest', () => {
+  it('validates a working key', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true }));
+
+    const result = await processValidateKeyRequest({ apiKey: 'test-key:fx' });
+    expect(result).toEqual({ status: 200, body: { ok: true, apiKey: 'test-key:fx' } });
     vi.unstubAllGlobals();
   });
 });
