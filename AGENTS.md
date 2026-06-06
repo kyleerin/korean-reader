@@ -14,7 +14,10 @@ Korean Reader is a React SPA with an optional translation API proxy. Reading/ana
 | Translation API | `npm run dev:api` | http://localhost:3001 |
 | Both (recommended) | `npm run dev:full` | web + API |
 
-Run `npm run dev:full` for translation (Vite proxies `/api` → port 3001). Users enter their own DeepL API key in the UI; it is stored in `localStorage` only.
+Users enter their own DeepL API key in the UI (**Add DeepL key**); it is stored in `localStorage` only. Translation requests go to `POST /api/translate`:
+- **Local dev:** Vite middleware (`npm run dev` / `npm run preview`)
+- **Vercel:** `api/translate.ts` serverless function (`vercel.json` configures the Vite SPA build)
+- **Optional:** standalone Node proxy via `npm run dev:api`
 
 `public/dictionary.ndjson` is pre-committed (~17 MB); `npm run build:dict` is only needed if rebuilding the dictionary from Hugging Face.
 
@@ -23,7 +26,7 @@ Run `npm run dev:full` for translation (Vite proxies `/api` → port 3001). User
 See `README.md` and `package.json` for full details:
 
 - **Install deps:** `npm install` (Node ≥ 20)
-- **Dev server:** `npm run dev` or `npm run dev:full` (with AI translation)
+- **Dev server:** `npm run dev` (includes translation API)
 - **Translation API only:** `npm run dev:api` (CORS proxy; no server env key needed)
 - **Tests:** `npm test` (Vitest, no browser required)
 - **Typecheck + production build:** `npm run build` (`tsc && vite build`)
