@@ -78,6 +78,27 @@ describe('ReadingPipeline', () => {
     expect(eat.lemma).toBe('먹다');
   });
 
+  it('resolves epenthetic 으 stems to the dictionary lemma', async () => {
+    const flySentence = '햇빛이 날아든다.';
+    const flyAnalysis: EojeolMorphemes[] = [
+      { surface: '햇빛이', morphemes: [{ surface: '햇빛', pos: 'NN' }, { surface: '이', pos: 'JKS' }] },
+      { surface: '날아든다.', morphemes: [{ surface: '날으', pos: 'VV' }, { surface: '어', pos: 'EC' }, { surface: '든', pos: 'JX' }, { surface: '.', pos: 'SF' }] },
+    ];
+    const dict = new InMemoryDictionaryRepository([
+      [['날다', 'VV'], { lemma: '날다', pos: 'VV', definitions: ['To move from one location to another in the air.'] }],
+      [['햇빛', 'NN'], { lemma: '햇빛', pos: 'NN', definitions: ['Light from the sun.'] }],
+    ]);
+    const flyPipeline = new ReadingPipeline(
+      new FakeMorphologicalAnalyzer(new Map([[flySentence, flyAnalysis]])),
+      dict,
+      knowledge,
+    );
+    const { sentences } = await flyPipeline.analyze(flySentence);
+    const fly = contentMorphemes(sentences[0]!.eojeols[1]!)[0]!;
+    expect(fly.lemma).toBe('날다');
+    expect(fly.definitions[0]).toContain('air');
+  });
+
   // ── MorphemeType classification ────────────────────────────────────────────
 
   it('pronoun is CONTENT', async () => {
