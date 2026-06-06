@@ -3,10 +3,12 @@ import type { AnalyzedEojeol, AnalyzedMorpheme, AnalyzedSentence, AnalyzedText, 
 import type { KnowledgeRepository } from '../knowledge/repository';
 import type { ReviewRepository } from '../review/repository';
 import { hasNewWords, isFullyKnown, vocabularyMorphemes } from '../domain/model';
+import { AiTranslation } from './AiTranslation';
 import { TapPanel } from './TapPanel';
 
 interface Props {
   text: AnalyzedText;
+  sourceText: string;
   knowledge: KnowledgeRepository;
   reviewRepo: ReviewRepository;
   onBack: () => void;
@@ -19,24 +21,15 @@ const STATE_COLOR: Record<KnowledgeState, string | undefined> = {
   IGNORED:  'var(--color-ignored)',
 };
 
-// Compatibility jamo (ㄱ-ㅣ, U+3131-U+3163) and leading/trailing jamo blocks.
-// These can't form syllable blocks when split across HTML elements.
 function hasBarejamo(s: string): boolean {
   return /[ㄱ-ㅣᄀ-ᇿ]/.test(s);
 }
 
-// True when we must render the whole eojeol surface as one text node instead of
-// stitching morpheme surfaces together. Two cases:
-//   1. A morpheme has a bare-jamo surface (can't form a syllable block alone).
-//   2. The morpheme surfaces don't reconstruct the original eojeol — e.g. the
-//      analyzer decomposes 했 into 하 + 았, so joining them yields 대답하았습니다
-//      instead of 대답했습니다. Render the true surface to avoid mangled text.
 function needsFallback(eojeol: AnalyzedEojeol): boolean {
   if (eojeol.morphemes.some(m => hasBarejamo(m.surface))) return true;
   return eojeol.morphemes.map(m => m.surface).join('') !== eojeol.surface;
 }
 
-// ── Single content-morpheme span (tappable, live color) ──────────────────────
 function ContentSpan({
   morpheme,
   knowledge,
@@ -63,7 +56,6 @@ function ContentSpan({
   );
 }
 
-// ── Eojeol rendered morpheme-by-morpheme (safe: no bare jamo) ────────────────
 function StandardEojeol({
   eojeol,
   knowledge,
@@ -82,7 +74,6 @@ function StandardEojeol({
         if (m.type === 'PUNCTUATION' || m.type === 'FOREIGN' || m.type === 'UNKNOWN') {
           return <span key={i}>{m.surface}</span>;
         }
-        // PARTICLE / ENDING / AFFIX → grey
         return <span key={i} style={{ color: 'var(--color-text-muted)' }}>{m.surface}</span>;
       })}
     </>
@@ -91,13 +82,6 @@ function StandardEojeol({
 
 interface Segment { text: string; color?: string }
 
-// Splits the true eojeol surface into colored segments. We peel morphemes off
-// the right as long as each one's surface matches the end of the remaining text:
-// grammatical endings/particles become grey, trailing punctuation keeps the
-// default color. Peeling stops at the first content/affix morpheme — its surface
-// may be fused into the preceding syllable (e.g. 했 = 하/XSV + 았/EP), so it stays
-// in the colored `head` as one tappable unit. Example: 대답했습니다. →
-// [대답했 (state color)] [습니다 (grey)] [. (default)].
 function fallbackSegments(eojeol: AnalyzedEojeol, headColor: string | undefined): Segment[] {
   const tail: Segment[] = [];
   let head = eojeol.surface;
@@ -106,7 +90,7 @@ function fallbackSegments(eojeol: AnalyzedEojeol, headColor: string | undefined)
     let segColor: string | undefined;
     if (m.type === 'PARTICLE' || m.type === 'ENDING') segColor = 'var(--color-text-muted)';
     else if (m.type === 'PUNCTUATION' || m.type === 'FOREIGN' || m.type === 'UNKNOWN') segColor = undefined;
-    else break; // CONTENT / AFFIX — may be fused into the stem; keep in head.
+    else break;
     if (!head.endsWith(m.surface) || head.length === m.surface.length) break;
     head = head.slice(0, head.length - m.surface.length);
     tail.unshift({ text: m.surface, color: segColor });
@@ -114,9 +98,6 @@ function fallbackSegments(eojeol: AnalyzedEojeol, headColor: string | undefined)
   return [{ text: head, color: headColor }, ...tail];
 }
 
-// ── Fallback: morpheme surfaces don't cleanly reconstruct the eojeol ──────────
-// Render the true surface; color the content head by dominant state, grey the
-// trailing grammatical endings. Still tappable.
 function FallbackEojeol({
   eojeol,
   knowledge,
@@ -170,16 +151,6 @@ function FallbackEojeol({
   );
 }
 
-const SHOW_TRANSLATIONS_KEY = 'korean-reader:show-translations';
-
-function readShowTranslations(): boolean {
-  try {
-    return localStorage.getItem(SHOW_TRANSLATIONS_KEY) === '1';
-  } catch {
-    return false;
-  }
-}
-
 function KoreanSentence({
   sentence,
   knowledge,
@@ -204,18 +175,8 @@ function KoreanSentence({
   );
 }
 
-// ── Top-level Reader ─────────────────────────────────────────────────────────
-export function Reader({ text, knowledge, reviewRepo, onBack }: Props) {
+export function Reader({ text, sourceText, knowledge, reviewRepo, onBack }: Props) {
   const [selected, setSelected] = useState<{ morpheme: AnalyzedMorpheme; state: KnowledgeState } | null>(null);
-  const [showTranslations, setShowTranslations] = useState(readShowTranslations);
-
-  function toggleTranslations() {
-    setShowTranslations(prev => {
-      const next = !prev;
-      try { localStorage.setItem(SHOW_TRANSLATIONS_KEY, next ? '1' : '0'); } catch { /* ignore */ }
-      return next;
-    });
-  }
 
   async function handleMark(newState: KnowledgeState) {
     if (!selected) return;
@@ -237,7 +198,7 @@ export function Reader({ text, knowledge, reviewRepo, onBack }: Props) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', paddingBottom: '8rem' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
         <button
           onClick={onBack}
           style={{ background: 'transparent', color: 'var(--color-text-muted)', padding: '0.25rem 0.5rem' }}
@@ -247,54 +208,26 @@ export function Reader({ text, knowledge, reviewRepo, onBack }: Props) {
         <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
           {newCount} new · {knownCount} known eojeols
         </span>
-        <button
-          onClick={toggleTranslations}
-          aria-pressed={showTranslations}
-          style={{
-            marginLeft: 'auto',
-            background: showTranslations ? 'var(--color-new)' : 'var(--color-surface)',
-            color: showTranslations ? '#fff' : 'var(--color-text-muted)',
-            border: `1px solid ${showTranslations ? 'var(--color-new)' : 'var(--color-border)'}`,
-            padding: '0.35rem 0.75rem',
-            fontSize: '0.8rem',
-          }}
-        >
-          {showTranslations ? 'Translations on' : 'Translations off'}
-        </button>
       </div>
 
-      <div style={{ fontSize: '1.1rem', lineHeight: 2, letterSpacing: '0.02em', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      <div style={{ fontSize: '1.1rem', lineHeight: 2, letterSpacing: '0.02em', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         {text.paragraphs.map((paragraph, pi) => (
-          <div key={pi} style={{ display: 'flex', flexDirection: 'column', gap: showTranslations ? '1rem' : '0.25rem' }}>
+          <p key={pi} style={{ margin: 0 }}>
             {paragraph.sentences.map((sentence, si) => (
-              <div key={si}>
-                <div>
-                  <KoreanSentence
-                    sentence={sentence}
-                    knowledge={knowledge}
-                    onTap={(m, s) => setSelected({ morpheme: m, state: s })}
-                  />
-                </div>
-                {showTranslations && sentence.translation && (
-                  <div
-                    style={{
-                      marginTop: '0.35rem',
-                      paddingLeft: '0.5rem',
-                      borderLeft: '2px solid var(--color-border)',
-                      fontSize: '0.92rem',
-                      lineHeight: 1.6,
-                      color: 'var(--color-text-muted)',
-                      fontStyle: 'italic',
-                    }}
-                  >
-                    {sentence.translation}
-                  </div>
-                )}
-              </div>
+              <span key={si}>
+                <KoreanSentence
+                  sentence={sentence}
+                  knowledge={knowledge}
+                  onTap={(m, s) => setSelected({ morpheme: m, state: s })}
+                />
+                {' '}
+              </span>
             ))}
-          </div>
+          </p>
         ))}
       </div>
+
+      <AiTranslation sourceText={sourceText} />
 
       {selected && (
         <TapPanel

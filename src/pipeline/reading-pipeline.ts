@@ -6,7 +6,6 @@ import type { EojeolMorphemes, MorphologicalAnalyzer } from './analyzer';
 import { lemmaCandidates } from './lemma-reconstructor';
 import { classifyMorpheme } from './morpheme-classifier';
 import { segmentParagraphs } from './tokenizer';
-import { translateSentence } from './sentence-translator';
 
 /**
  * Orchestrates the full reading pipeline:
@@ -39,8 +38,7 @@ export class ReadingPipeline {
   private async analyzeSentence(sentence: string): Promise<AnalyzedSentence> {
     const eojeolMorphemesList = await this.analyzer.analyze(sentence);
     const eojeols = await Promise.all(eojeolMorphemesList.map(e => this.analyzeEojeol(e)));
-    const analyzed: AnalyzedSentence = { surface: sentence, eojeols, translation: '' };
-    return { ...analyzed, translation: translateSentence(analyzed) };
+    return { surface: sentence, eojeols };
   }
 
   private async analyzeEojeol(raw: EojeolMorphemes): Promise<AnalyzedEojeol> {

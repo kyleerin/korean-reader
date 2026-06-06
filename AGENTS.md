@@ -4,22 +4,27 @@
 
 ### Product overview
 
-Korean Reader is a single offline-first React SPA (no backend). All persistence is in-browser via `localStorage`. The Vite dev server is the only process required for local development and manual E2E testing.
+Korean Reader is a React SPA with an optional translation API. Reading/analysis is offline in the browser (`localStorage`); AI full-text translation calls `POST /api/translate` on a small Node server.
 
 ### Services
 
 | Service | Command | URL |
 |---|---|---|
 | Vite dev server | `npm run dev` | http://localhost:5173 |
+| Translation API | `npm run dev:api` | http://localhost:3001 |
+| Both (recommended) | `npm run dev:full` | web + API |
 
-No Docker, database server, or external API is needed. `public/dictionary.ndjson` is pre-committed (~17 MB); `npm run build:dict` is only needed if rebuilding the dictionary from Hugging Face.
+Set `OPENAI_API_KEY` in `.env` (copy from `.env.example`) before starting the translation API. Vite proxies `/api` → port 3001 in dev.
+
+`public/dictionary.ndjson` is pre-committed (~17 MB); `npm run build:dict` is only needed if rebuilding the dictionary from Hugging Face.
 
 ### Standard commands
 
 See `README.md` and `package.json` for full details:
 
 - **Install deps:** `npm install` (Node ≥ 20)
-- **Dev server:** `npm run dev`
+- **Dev server:** `npm run dev` or `npm run dev:full` (with AI translation)
+- **Translation API only:** `npm run dev:api` (requires `OPENAI_API_KEY`)
 - **Tests:** `npm test` (Vitest, no browser required)
 - **Typecheck + production build:** `npm run build` (`tsc && vite build`)
 - **Preview production build:** `npm run preview` → http://localhost:4173
