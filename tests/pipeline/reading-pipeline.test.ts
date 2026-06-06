@@ -78,6 +78,28 @@ describe('ReadingPipeline', () => {
     expect(eat.lemma).toBe('먹다');
   });
 
+  it('falls back from VX to VV for auxiliary verbs like 보다', async () => {
+    const sentence = '느껴 본다.';
+    const analysis: EojeolMorphemes[] = [
+      { surface: '느껴', morphemes: [{ surface: '느끼', pos: 'VV' }, { surface: '어', pos: 'EC' }] },
+      { surface: '본다.', morphemes: [{ surface: '보', pos: 'VX' }, { surface: 'ㄴ다', pos: 'EF' }, { surface: '.', pos: 'SF' }] },
+    ];
+    const dict = new InMemoryDictionaryRepository([
+      [['느끼다', 'VV'], { lemma: '느끼다', pos: 'VV', definitions: ['to feel'] }],
+      [['보다', 'VV'], { lemma: '보다', pos: 'VV', definitions: ['to see; to try doing'] }],
+    ]);
+    const auxPipeline = new ReadingPipeline(
+      new FakeMorphologicalAnalyzer(new Map([[sentence, analysis]])),
+      dict,
+      knowledge,
+    );
+    const { sentences } = await auxPipeline.analyze(sentence);
+    const see = contentMorphemes(sentences[0]!.eojeols[1]!)[0]!;
+    expect(see.pos).toBe('VX');
+    expect(see.lemma).toBe('보다');
+    expect(see.definitions).toEqual(['to see; to try doing']);
+  });
+
   it('resolves epenthetic 으 stems to the dictionary lemma', async () => {
     const flySentence = '햇빛이 날아든다.';
     const flyAnalysis: EojeolMorphemes[] = [
