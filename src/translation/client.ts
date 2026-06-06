@@ -1,3 +1,5 @@
+import { apiFetch } from '../api/client';
+
 export class TranslationClientError extends Error {
   constructor(
     message: string,
@@ -8,13 +10,9 @@ export class TranslationClientError extends Error {
   }
 }
 
-function apiBase(): string {
-  return import.meta.env.VITE_API_BASE ?? '';
-}
-
 export async function fetchTranslationEnabled(): Promise<boolean> {
   try {
-    const res = await fetch(`${apiBase()}/api/translate/config`);
+    const res = await apiFetch('/api/translate/config');
     if (!res.ok) return false;
     const payload = await res.json() as { enabled?: boolean };
     return payload.enabled === true;
@@ -24,7 +22,7 @@ export async function fetchTranslationEnabled(): Promise<boolean> {
 }
 
 export async function fetchAiTranslation(text: string): Promise<string> {
-  const res = await fetch(`${apiBase()}/api/translate`, {
+  const res = await apiFetch('/api/translate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ text }),

@@ -28,8 +28,11 @@
     "vitest": "^2.1.0"
   },
   "dependencies": {
+    "@react-oauth/google": "^0.13.5",
     "@sqlite.org/sqlite-wasm": "^3.53.0-build1",
     "garu-ko": "^0.9.3",
+    "google-auth-library": "^10.7.0",
+    "jose": "^6.2.3",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "ts-fsrs": "^5.4.1"

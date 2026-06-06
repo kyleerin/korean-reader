@@ -5,6 +5,7 @@ import type { ReviewRepository } from '../review/repository';
 import { hasNewWords, isFullyKnown, vocabularyMorphemes } from '../domain/model';
 import { fetchTranslationEnabled } from '../translation/client';
 import { AiTranslation } from './AiTranslation';
+import { AppHeader } from './AppHeader';
 import { TapPanel } from './TapPanel';
 
 interface Props {
@@ -208,17 +209,21 @@ export function Reader({ text, sourceText, knowledge, reviewRepo, onBack }: Prop
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', paddingBottom: '8rem' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        <button
-          onClick={onBack}
-          style={{ background: 'transparent', color: 'var(--color-text-muted)', padding: '0.25rem 0.5rem' }}
-        >
-          ← Back
-        </button>
-        <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
-          {newCount} new · {knownCount} known eojeols
-        </span>
-      </div>
+      <AppHeader
+        left={(
+          <>
+            <button
+              onClick={onBack}
+              style={{ background: 'transparent', color: 'var(--color-text-muted)', padding: '0.25rem 0.5rem' }}
+            >
+              ← Back
+            </button>
+            <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
+              {newCount} new · {knownCount} known eojeols
+            </span>
+          </>
+        )}
+      />
 
       <div style={{ fontSize: '1.1rem', lineHeight: 2, letterSpacing: '0.02em', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         {text.paragraphs.map((paragraph, pi) => (

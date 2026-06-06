@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { AppHeader } from './AppHeader';
 import { fsrs, Rating, State } from 'ts-fsrs';
 import type { Grade } from 'ts-fsrs';
 import type { ReviewCard } from '../review/repository';
@@ -119,15 +120,18 @@ export function ReviewScreen({ reviewRepo, onBack }: Props) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', flex: 1 }}>
 
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        <button onClick={onBack} style={{ background: 'transparent', color: 'var(--color-text-muted)', padding: '0.25rem 0.5rem' }}>
-          ← Back
-        </button>
-        <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
-          {reviewed} done · {queue.length} left
-        </span>
-      </div>
+      <AppHeader
+        left={(
+          <>
+            <button onClick={onBack} style={{ background: 'transparent', color: 'var(--color-text-muted)', padding: '0.25rem 0.5rem' }}>
+              ← Back
+            </button>
+            <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
+              {reviewed} done · {queue.length} left
+            </span>
+          </>
+        )}
+      />
 
       {/* Card */}
       <div style={{
