@@ -3,7 +3,7 @@ import type { AnalyzedEojeol, AnalyzedMorpheme, AnalyzedSentence, AnalyzedText, 
 import type { KnowledgeRepository } from '../knowledge/repository';
 import type { ReviewRepository } from '../review/repository';
 import { hasNewWords, isFullyKnown, vocabularyMorphemes } from '../domain/model';
-import { fetchTranslationEnabled } from '../translation/client';
+import { useDeepLSettings, DeepLSettingsButton } from '../translation/DeepLSettings';
 import { AiTranslation } from './AiTranslation';
 import { TapPanel } from './TapPanel';
 
@@ -178,15 +178,7 @@ function KoreanSentence({
 
 export function Reader({ text, sourceText, knowledge, reviewRepo, onBack }: Props) {
   const [selected, setSelected] = useState<{ morpheme: AnalyzedMorpheme; state: KnowledgeState } | null>(null);
-  const [translationEnabled, setTranslationEnabled] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetchTranslationEnabled().then(enabled => {
-      if (!cancelled) setTranslationEnabled(enabled);
-    });
-    return () => { cancelled = true; };
-  }, []);
+  const { apiKey, hasApiKey } = useDeepLSettings();
 
   async function handleMark(newState: KnowledgeState) {
     if (!selected) return;
@@ -208,7 +200,7 @@ export function Reader({ text, sourceText, knowledge, reviewRepo, onBack }: Prop
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', paddingBottom: '8rem' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
         <button
           onClick={onBack}
           style={{ background: 'transparent', color: 'var(--color-text-muted)', padding: '0.25rem 0.5rem' }}
@@ -218,6 +210,7 @@ export function Reader({ text, sourceText, knowledge, reviewRepo, onBack }: Prop
         <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
           {newCount} new · {knownCount} known eojeols
         </span>
+        <DeepLSettingsButton />
       </div>
 
       <div style={{ fontSize: '1.1rem', lineHeight: 2, letterSpacing: '0.02em', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -237,7 +230,7 @@ export function Reader({ text, sourceText, knowledge, reviewRepo, onBack }: Prop
         ))}
       </div>
 
-      {translationEnabled && <AiTranslation sourceText={sourceText} />}
+      {hasApiKey && apiKey && <AiTranslation sourceText={sourceText} apiKey={apiKey} />}
 
       {selected && (
         <TapPanel

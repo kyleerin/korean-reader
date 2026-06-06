@@ -1,3 +1,5 @@
+import { getDeepLApiKey } from './storage';
+
 export class TranslationClientError extends Error {
   constructor(
     message: string,
@@ -12,22 +14,15 @@ function apiBase(): string {
   return import.meta.env.VITE_API_BASE ?? '';
 }
 
-export async function fetchTranslationEnabled(): Promise<boolean> {
-  try {
-    const res = await fetch(`${apiBase()}/api/translate/config`);
-    if (!res.ok) return false;
-    const payload = await res.json() as { enabled?: boolean };
-    return payload.enabled === true;
-  } catch {
-    return false;
-  }
+export function isTranslationAvailable(): boolean {
+  return getDeepLApiKey() !== null;
 }
 
-export async function fetchAiTranslation(text: string): Promise<string> {
+export async function fetchAiTranslation(text: string, apiKey: string): Promise<string> {
   const res = await fetch(`${apiBase()}/api/translate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text }),
+    body: JSON.stringify({ text, apiKey }),
   });
 
   const payload = await res.json().catch(() => ({})) as { translation?: string; error?: string };

@@ -1,33 +1,24 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fetchAiTranslation, fetchTranslationEnabled, TranslationClientError } from '../../src/translation/client';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { fetchAiTranslation, isTranslationAvailable, TranslationClientError } from '../../src/translation/client';
+import { setDeepLApiKey } from '../../src/translation/storage';
+import { createMemoryLocalStorage } from '../fakes/memory-local-storage';
 
-describe('fetchTranslationEnabled', () => {
+describe('isTranslationAvailable', () => {
+  beforeEach(() => {
+    vi.stubGlobal('localStorage', createMemoryLocalStorage());
+  });
+
   afterEach(() => {
     vi.unstubAllGlobals();
   });
 
-  it('returns true when the API reports enabled', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ enabled: true }),
-    }));
-
-    await expect(fetchTranslationEnabled()).resolves.toBe(true);
+  it('returns false when no key is saved', () => {
+    expect(isTranslationAvailable()).toBe(false);
   });
 
-  it('returns false when the API is unavailable', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network')));
-
-    await expect(fetchTranslationEnabled()).resolves.toBe(false);
-  });
-
-  it('returns false when translation is disabled', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ enabled: false }),
-    }));
-
-    await expect(fetchTranslationEnabled()).resolves.toBe(false);
+  it('returns true when a key is saved', () => {
+    setDeepLApiKey('test-key:fx');
+    expect(isTranslationAvailable()).toBe(true);
   });
 });
 
@@ -42,7 +33,11 @@ describe('fetchAiTranslation', () => {
       json: async () => ({ translation: 'Hello.' }),
     }));
 
-    await expect(fetchAiTranslation('안녕하세요.')).resolves.toBe('Hello.');
+    await expect(fetchAiTranslation('안녕하세요.', 'test-key:fx')).resolves.toBe('Hello.');
+    expect(fetch).toHaveBeenCalledWith('/api/translate', expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({ text: '안녕하세요.', apiKey: 'test-key:fx' }),
+    }));
   });
 
   it('throws on API errors', async () => {
@@ -52,6 +47,6 @@ describe('fetchAiTranslation', () => {
       json: async () => ({ error: 'not configured' }),
     }));
 
-    await expect(fetchAiTranslation('안녕')).rejects.toBeInstanceOf(TranslationClientError);
+    await expect(fetchAiTranslation('안녕', 'test-key:fx')).rejects.toBeInstanceOf(TranslationClientError);
   });
 });

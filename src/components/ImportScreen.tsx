@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { DeepLSettingsButton } from '../translation/DeepLSettings';
 
 interface Props {
   onImport: (text: string) => void;
@@ -11,8 +12,8 @@ export function ImportScreen({ onImport, dueCount, onReview }: Props) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', flex: 1 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1 style={{ fontSize: '1.4rem', fontWeight: 600 }}>Korean Reader</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+        <h1 style={{ fontSize: '1.4rem', fontWeight: 600, margin: 0 }}>Korean Reader</h1>
         {dueCount > 0 && (
           <button
             onClick={onReview}
@@ -21,6 +22,7 @@ export function ImportScreen({ onImport, dueCount, onReview }: Props) {
             Review ({dueCount} due)
           </button>
         )}
+        <DeepLSettingsButton />
       </div>
 
       <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>

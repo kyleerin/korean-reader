@@ -2,7 +2,6 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { translateKoreanText, TranslationError } from './translate.js';
 
 const PORT = Number(process.env.PORT ?? 3001);
-const API_KEY = process.env.DEEPL_API_KEY;
 const API_BASE = process.env.DEEPL_API_URL;
 const SOURCE_LANG = process.env.DEEPL_SOURCE_LANG;
 const TARGET_LANG = process.env.DEEPL_TARGET_LANG;
@@ -11,7 +10,7 @@ function sendJson(res: ServerResponse, status: number, body: unknown): void {
   res.writeHead(status, {
     'Content-Type': 'application/json',
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
   });
   res.end(JSON.stringify(body));
@@ -31,31 +30,25 @@ const server = createServer(async (req, res) => {
     return;
   }
 
-  if (req.method === 'GET' && req.url === '/api/translate/config') {
-    sendJson(res, 200, { enabled: Boolean(API_KEY) });
-    return;
-  }
-
   if (req.method !== 'POST' || req.url !== '/api/translate') {
     sendJson(res, 404, { error: 'Not found' });
     return;
   }
 
-  if (!API_KEY) {
-    sendJson(res, 503, { error: 'Translation service is not configured (missing DEEPL_API_KEY).' });
-    return;
-  }
-
   try {
-    const body = await readJsonBody(req) as { text?: unknown };
+    const body = await readJsonBody(req) as { text?: unknown; apiKey?: unknown };
     if (typeof body.text !== 'string') {
-      sendJson(res, 400, { error: 'Expected JSON body: { "text": string }' });
+      sendJson(res, 400, { error: 'Expected JSON body: { "text": string, "apiKey": string }' });
+      return;
+    }
+    if (typeof body.apiKey !== 'string' || !body.apiKey.trim()) {
+      sendJson(res, 400, { error: 'DeepL API key is required.' });
       return;
     }
 
     const translation = await translateKoreanText(body.text, {
       config: {
-        apiKey: API_KEY,
+        apiKey: body.apiKey.trim(),
         apiBase: API_BASE,
         sourceLang: SOURCE_LANG,
         targetLang: TARGET_LANG,
