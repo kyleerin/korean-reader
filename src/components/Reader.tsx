@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { AnalyzedEojeol, AnalyzedMorpheme, AnalyzedSentence, AnalyzedText, KnowledgeState } from '../domain/model';
 import type { KnowledgeRepository } from '../knowledge/repository';
 import type { ReviewRepository } from '../review/repository';
-import { hasNewWords, isFullyKnown } from '../domain/model';
+import { hasNewWords, isFullyKnown, vocabularyMorphemes } from '../domain/model';
 import { TapPanel } from './TapPanel';
 
 interface Props {
@@ -126,15 +126,15 @@ function FallbackEojeol({
   knowledge: KnowledgeRepository;
   onTap: (m: AnalyzedMorpheme, s: KnowledgeState) => void;
 }) {
-  const contentMorphemes = eojeol.morphemes.filter(m => m.type === 'CONTENT');
+  const vocabMorphemes = vocabularyMorphemes(eojeol);
 
   const [statesMap, setStatesMap] = useState<Map<string, KnowledgeState>>(
-    () => new Map(contentMorphemes.map(m => [`${m.lemma}\x00${m.pos}`, m.state])),
+    () => new Map(vocabMorphemes.map(m => [`${m.lemma}\x00${m.pos}`, m.state])),
   );
 
   useEffect(() => {
-    setStatesMap(new Map(contentMorphemes.map(m => [`${m.lemma}\x00${m.pos}`, m.state])));
-    const unsubs = contentMorphemes.map(m =>
+    setStatesMap(new Map(vocabMorphemes.map(m => [`${m.lemma}\x00${m.pos}`, m.state])));
+    const unsubs = vocabMorphemes.map(m =>
       knowledge.observeState(m.lemma, m.pos, s =>
         setStatesMap(prev => new Map(prev).set(`${m.lemma}\x00${m.pos}`, s)),
       ),
@@ -149,12 +149,12 @@ function FallbackEojeol({
   else if (states.includes('LEARNING')) color = STATE_COLOR.LEARNING;
   else if (states.every(s => s === 'IGNORED')) color = STATE_COLOR.IGNORED;
 
-  if (contentMorphemes.length === 0) {
+  if (vocabMorphemes.length === 0) {
     return <span style={{ color: 'var(--color-text-muted)' }}>{eojeol.surface}</span>;
   }
 
   function handleClick() {
-    const primary = contentMorphemes[0]!;
+    const primary = vocabMorphemes[0]!;
     const state = statesMap.get(`${primary.lemma}\x00${primary.pos}`) ?? primary.state;
     onTap(primary, state);
   }

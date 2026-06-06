@@ -93,13 +93,25 @@ export function contentMorphemes(eojeol: AnalyzedEojeol): AnalyzedMorpheme[] {
   return eojeol.morphemes.filter(m => m.type === 'CONTENT');
 }
 
+/** Bound VX auxiliaries (지, 되, …) fused into a verb — not separate vocabulary. */
+const BOUND_AUXILIARY_VX = new Set(['지', '되', '주', '시', '겠', '못', '안', '않']);
+
+export function isBoundAuxiliary(m: { surface: string; pos: PartOfSpeech }): boolean {
+  return m.pos === 'VX' && BOUND_AUXILIARY_VX.has(m.surface);
+}
+
+/** Content morphemes that represent trackable vocabulary (excludes bound auxiliaries). */
+export function vocabularyMorphemes(eojeol: AnalyzedEojeol): AnalyzedMorpheme[] {
+  return eojeol.morphemes.filter(m => m.type === 'CONTENT' && !isBoundAuxiliary(m));
+}
+
 export function hasNewWords(eojeol: AnalyzedEojeol): boolean {
-  return contentMorphemes(eojeol).some(m => m.state === 'NEW');
+  return vocabularyMorphemes(eojeol).some(m => m.state === 'NEW');
 }
 
 export function isFullyKnown(eojeol: AnalyzedEojeol): boolean {
-  const content = contentMorphemes(eojeol);
-  return content.length === 0 || content.every(m => m.state === 'KNOWN' || m.state === 'IGNORED');
+  const vocab = vocabularyMorphemes(eojeol);
+  return vocab.length === 0 || vocab.every(m => m.state === 'KNOWN' || m.state === 'IGNORED');
 }
 
 export function totalEojeols(text: AnalyzedText): number {
