@@ -4,9 +4,10 @@ import { fetchAiTranslation } from '../translation/client';
 interface Props {
   sourceText: string;
   apiKey: string;
+  onHide?: () => void;
 }
 
-export function AiTranslation({ sourceText, apiKey }: Props) {
+export function AiTranslation({ sourceText, apiKey, onHide }: Props) {
   const [translation, setTranslation] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -40,18 +41,35 @@ export function AiTranslation({ sourceText, apiKey }: Props) {
         borderTop: '1px solid var(--color-border)',
       }}
     >
-      <h2
-        style={{
-          fontSize: '0.85rem',
-          color: 'var(--color-text-muted)',
-          marginBottom: '0.75rem',
-          fontWeight: 600,
-          letterSpacing: '0.05em',
-          textTransform: 'uppercase',
-        }}
-      >
-        Translation
-      </h2>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '0.75rem' }}>
+        <h2
+          style={{
+            fontSize: '0.85rem',
+            color: 'var(--color-text-muted)',
+            fontWeight: 600,
+            letterSpacing: '0.05em',
+            textTransform: 'uppercase',
+            margin: 0,
+          }}
+        >
+          Translation
+        </h2>
+        {onHide && (
+          <button
+            type="button"
+            onClick={onHide}
+            style={{
+              background: 'transparent',
+              color: 'var(--color-text-muted)',
+              border: 'none',
+              padding: '0.25rem 0.5rem',
+              fontSize: '0.8rem',
+            }}
+          >
+            Hide
+          </button>
+        )}
+      </div>
       {loading && (
         <p style={{ color: 'var(--color-text-muted)', fontSize: '0.95rem' }}>Translating…</p>
       )}

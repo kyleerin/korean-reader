@@ -178,6 +178,7 @@ function KoreanSentence({
 
 export function Reader({ text, sourceText, knowledge, reviewRepo, onBack }: Props) {
   const [selected, setSelected] = useState<{ morpheme: AnalyzedMorpheme; state: KnowledgeState } | null>(null);
+  const [showTranslation, setShowTranslation] = useState(false);
   const { apiKey, hasApiKey } = useDeepLSettings();
 
   async function handleMark(newState: KnowledgeState) {
@@ -230,7 +231,30 @@ export function Reader({ text, sourceText, knowledge, reviewRepo, onBack }: Prop
         ))}
       </div>
 
-      {hasApiKey && apiKey && <AiTranslation sourceText={sourceText} apiKey={apiKey} />}
+      {hasApiKey && apiKey && !showTranslation && (
+        <button
+          type="button"
+          onClick={() => setShowTranslation(true)}
+          style={{
+            alignSelf: 'flex-start',
+            background: 'var(--color-surface)',
+            color: 'var(--color-text)',
+            border: '1px solid var(--color-border)',
+            padding: '0.5rem 0.9rem',
+            fontSize: '0.9rem',
+          }}
+        >
+          Show translation
+        </button>
+      )}
+
+      {hasApiKey && apiKey && showTranslation && (
+        <AiTranslation
+          sourceText={sourceText}
+          apiKey={apiKey}
+          onHide={() => setShowTranslation(false)}
+        />
+      )}
 
       {selected && (
         <TapPanel
