@@ -1,5 +1,35 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fetchAiTranslation, TranslationClientError } from '../../src/translation/client';
+import { fetchAiTranslation, fetchTranslationEnabled, TranslationClientError } from '../../src/translation/client';
+
+describe('fetchTranslationEnabled', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('returns true when the API reports enabled', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ enabled: true }),
+    }));
+
+    await expect(fetchTranslationEnabled()).resolves.toBe(true);
+  });
+
+  it('returns false when the API is unavailable', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network')));
+
+    await expect(fetchTranslationEnabled()).resolves.toBe(false);
+  });
+
+  it('returns false when translation is disabled', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ enabled: false }),
+    }));
+
+    await expect(fetchTranslationEnabled()).resolves.toBe(false);
+  });
+});
 
 describe('fetchAiTranslation', () => {
   afterEach(() => {

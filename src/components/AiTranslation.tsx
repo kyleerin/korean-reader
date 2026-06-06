@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { fetchAiTranslation, TranslationClientError } from '../translation/client';
+import { fetchAiTranslation } from '../translation/client';
 
 interface Props {
   sourceText: string;
@@ -22,11 +22,7 @@ export function AiTranslation({ sourceText }: Props) {
       })
       .catch((err: unknown) => {
         if (cancelled) return;
-        if (err instanceof TranslationClientError && err.status === 503) {
-          setError('Translation server is not configured. Start it with npm run dev:api and set DEEPL_API_KEY.');
-        } else {
-          setError(err instanceof Error ? err.message : 'Translation failed.');
-        }
+        setError(err instanceof Error ? err.message : 'Translation failed.');
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
