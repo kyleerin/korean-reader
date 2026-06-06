@@ -49,6 +49,16 @@ describe('ReadingPipeline', () => {
     expect(result.sentences).toHaveLength(1);
   });
 
+  it('preserves the original sentence surface', async () => {
+    const { sentences } = await pipeline.analyze(SENTENCE);
+    expect(sentences[0]!.surface).toBe(SENTENCE);
+  });
+
+  it('builds a line-level translation from dictionary glosses', async () => {
+    const { sentences } = await pipeline.analyze(SENTENCE);
+    expect(sentences[0]!.translation).toBe('I meal eat.');
+  });
+
   it('produces three eojeols', async () => {
     const { sentences } = await pipeline.analyze(SENTENCE);
     expect(sentences[0]!.eojeols).toHaveLength(3);
