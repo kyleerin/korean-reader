@@ -1,5 +1,5 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
-import { translateKoreanText, TranslationError } from './translate.js';
+import { processTranslateRequest } from './translate-route.js';
 
 const PORT = Number(process.env.PORT ?? 3001);
 const API_BASE = process.env.DEEPL_API_URL;
@@ -36,30 +36,14 @@ const server = createServer(async (req, res) => {
   }
 
   try {
-    const body = await readJsonBody(req) as { text?: unknown; apiKey?: unknown };
-    if (typeof body.text !== 'string') {
-      sendJson(res, 400, { error: 'Expected JSON body: { "text": string, "apiKey": string }' });
-      return;
-    }
-    if (typeof body.apiKey !== 'string' || !body.apiKey.trim()) {
-      sendJson(res, 400, { error: 'DeepL API key is required.' });
-      return;
-    }
-
-    const translation = await translateKoreanText(body.text, {
-      config: {
-        apiKey: body.apiKey.trim(),
-        apiBase: API_BASE,
-        sourceLang: SOURCE_LANG,
-        targetLang: TARGET_LANG,
-      },
+    const body = await readJsonBody(req);
+    const result = await processTranslateRequest(body as Parameters<typeof processTranslateRequest>[0], {
+      apiBase: API_BASE,
+      sourceLang: SOURCE_LANG,
+      targetLang: TARGET_LANG,
     });
-    sendJson(res, 200, { translation });
+    sendJson(res, result.status, result.body);
   } catch (err) {
-    if (err instanceof TranslationError) {
-      sendJson(res, err.status, { error: err.message });
-      return;
-    }
     if (err instanceof SyntaxError) {
       sendJson(res, 400, { error: 'Invalid JSON body.' });
       return;

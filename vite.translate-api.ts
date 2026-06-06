@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Plugin } from 'vite';
-import { translateKoreanText, TranslationError } from './server/translate';
+import { processTranslateRequest } from './server/translate-route';
 
 async function readJsonBody(req: IncomingMessage): Promise<unknown> {
   const chunks: Buffer[] = [];
@@ -18,25 +18,10 @@ function sendJson(res: ServerResponse, status: number, body: unknown): void {
 
 async function handleTranslate(req: IncomingMessage, res: ServerResponse): Promise<void> {
   try {
-    const body = await readJsonBody(req) as { text?: unknown; apiKey?: unknown };
-    if (typeof body.text !== 'string') {
-      sendJson(res, 400, { error: 'Expected JSON body: { "text": string, "apiKey": string }' });
-      return;
-    }
-    if (typeof body.apiKey !== 'string' || !body.apiKey.trim()) {
-      sendJson(res, 400, { error: 'DeepL API key is required.' });
-      return;
-    }
-
-    const translation = await translateKoreanText(body.text, {
-      config: { apiKey: body.apiKey.trim() },
-    });
-    sendJson(res, 200, { translation });
+    const body = await readJsonBody(req);
+    const result = await processTranslateRequest(body as Parameters<typeof processTranslateRequest>[0]);
+    sendJson(res, result.status, result.body);
   } catch (err) {
-    if (err instanceof TranslationError) {
-      sendJson(res, err.status, { error: err.message });
-      return;
-    }
     if (err instanceof SyntaxError) {
       sendJson(res, 400, { error: 'Invalid JSON body.' });
       return;
