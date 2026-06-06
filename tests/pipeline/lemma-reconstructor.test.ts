@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { reconstructLemma } from '../../src/pipeline/lemma-reconstructor';
+import { lemmaCandidates, reconstructLemma } from '../../src/pipeline/lemma-reconstructor';
 
 describe('reconstructLemma', () => {
   it('appends 다 to verb stems', () => {
@@ -38,5 +38,19 @@ describe('reconstructLemma', () => {
   it('returns adverbs unchanged', () => {
     expect(reconstructLemma('빨리', 'MAG')).toBe('빨리');
     expect(reconstructLemma('그리고', 'MAJ')).toBe('그리고');
+  });
+});
+
+describe('lemmaCandidates', () => {
+  it('includes an alternate when the stem ends with epenthetic 으', () => {
+    expect(lemmaCandidates('날으', 'VV')).toEqual(['날으다', '날다']);
+  });
+
+  it('lists the primary lemma before the 으-stripped alternate', () => {
+    expect(lemmaCandidates('모으', 'VV')).toEqual(['모으다', '모다']);
+  });
+
+  it('returns a single candidate for nouns', () => {
+    expect(lemmaCandidates('학생', 'NN')).toEqual(['학생']);
   });
 });

@@ -2,7 +2,7 @@ import type { DictionaryRepository } from '../dictionary/repository';
 import type { AnalyzedEojeol, AnalyzedMorpheme, AnalyzedParagraph, AnalyzedSentence, AnalyzedText, Morpheme } from '../domain/model';
 import type { KnowledgeRepository } from '../knowledge/repository';
 import type { EojeolMorphemes, MorphologicalAnalyzer } from './analyzer';
-import { reconstructLemma } from './lemma-reconstructor';
+import { lemmaCandidates } from './lemma-reconstructor';
 import { classifyMorpheme } from './morpheme-classifier';
 import { segmentParagraphs } from './tokenizer';
 import { translateSentence } from './sentence-translator';
@@ -53,15 +53,21 @@ export class ReadingPipeline {
     const type = classifyMorpheme(morpheme.pos);
 
     if (type === 'CONTENT') {
-      const lemma = reconstructLemma(morpheme.surface, morpheme.pos);
-      const [entries, state] = await Promise.all([
-        this.dictionary.lookupAll(lemma),
-        this.knowledge.getState(lemma, morpheme.pos),
-      ]);
-      const posEntries = entries.filter(e => e.pos === morpheme.pos);
-      const definitions = posEntries.length > 0
-        ? posEntries.flatMap(e => e.definitions)
-        : (await this.dictionary.lookup(lemma, morpheme.pos))?.definitions ?? [];
+      const candidates = lemmaCandidates(morpheme.surface, morpheme.pos);
+      let lemma = candidates[0]!;
+      let definitions: readonly string[] = [];
+
+      for (const candidate of candidates) {
+        const posEntries = (await this.dictionary.lookupAll(candidate))
+          .filter(e => e.pos === morpheme.pos);
+        if (posEntries.length > 0) {
+          lemma = candidate;
+          definitions = posEntries.flatMap(e => e.definitions);
+          break;
+        }
+      }
+
+      const state = await this.knowledge.getState(lemma, morpheme.pos);
       return {
         surface: morpheme.surface,
         lemma,
