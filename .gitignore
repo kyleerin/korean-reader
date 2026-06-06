@@ -21,3 +21,4 @@ dist/
 
 # Secrets / local config
 *.env
+data/

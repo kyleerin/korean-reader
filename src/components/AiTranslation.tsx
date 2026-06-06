@@ -3,9 +3,10 @@ import { fetchAiTranslation } from '../translation/client';
 
 interface Props {
   sourceText: string;
+  apiKey: string;
 }
 
-export function AiTranslation({ sourceText }: Props) {
+export function AiTranslation({ sourceText, apiKey }: Props) {
   const [translation, setTranslation] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -16,7 +17,7 @@ export function AiTranslation({ sourceText }: Props) {
     setError(null);
     setTranslation(null);
 
-    fetchAiTranslation(sourceText)
+    fetchAiTranslation(sourceText, apiKey)
       .then(result => {
         if (!cancelled) setTranslation(result);
       })
@@ -29,7 +30,7 @@ export function AiTranslation({ sourceText }: Props) {
       });
 
     return () => { cancelled = true; };
-  }, [sourceText]);
+  }, [sourceText, apiKey]);
 
   return (
     <section
