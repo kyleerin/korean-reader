@@ -3,6 +3,7 @@ import type { AnalyzedEojeol, AnalyzedMorpheme, AnalyzedSentence, AnalyzedText, 
 import type { KnowledgeRepository } from '../knowledge/repository';
 import type { ReviewRepository } from '../review/repository';
 import { hasNewWords, isFullyKnown, vocabularyMorphemes } from '../domain/model';
+import { fetchTranslationEnabled } from '../translation/client';
 import { AiTranslation } from './AiTranslation';
 import { TapPanel } from './TapPanel';
 
@@ -177,6 +178,15 @@ function KoreanSentence({
 
 export function Reader({ text, sourceText, knowledge, reviewRepo, onBack }: Props) {
   const [selected, setSelected] = useState<{ morpheme: AnalyzedMorpheme; state: KnowledgeState } | null>(null);
+  const [translationEnabled, setTranslationEnabled] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchTranslationEnabled().then(enabled => {
+      if (!cancelled) setTranslationEnabled(enabled);
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   async function handleMark(newState: KnowledgeState) {
     if (!selected) return;
@@ -227,7 +237,7 @@ export function Reader({ text, sourceText, knowledge, reviewRepo, onBack }: Prop
         ))}
       </div>
 
-      <AiTranslation sourceText={sourceText} />
+      {translationEnabled && <AiTranslation sourceText={sourceText} />}
 
       {selected && (
         <TapPanel

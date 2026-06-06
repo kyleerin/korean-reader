@@ -11,7 +11,7 @@ function sendJson(res: ServerResponse, status: number, body: unknown): void {
   res.writeHead(status, {
     'Content-Type': 'application/json',
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
   });
   res.end(JSON.stringify(body));
@@ -28,6 +28,11 @@ async function readJsonBody(req: IncomingMessage): Promise<unknown> {
 const server = createServer(async (req, res) => {
   if (req.method === 'OPTIONS') {
     sendJson(res, 204, {});
+    return;
+  }
+
+  if (req.method === 'GET' && req.url === '/api/translate/config') {
+    sendJson(res, 200, { enabled: Boolean(API_KEY) });
     return;
   }
 
