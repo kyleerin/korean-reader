@@ -1,3 +1,4 @@
+import { dictionaryPosLookupOrder } from '../dictionary/pos-fallbacks';
 import type { DictionaryRepository } from '../dictionary/repository';
 import type { AnalyzedEojeol, AnalyzedMorpheme, AnalyzedParagraph, AnalyzedSentence, AnalyzedText, Morpheme } from '../domain/model';
 import type { KnowledgeRepository } from '../knowledge/repository';
@@ -57,13 +58,16 @@ export class ReadingPipeline {
       let lemma = candidates[0]!;
       let definitions: readonly string[] = [];
 
+      lookup:
       for (const candidate of candidates) {
-        const posEntries = (await this.dictionary.lookupAll(candidate))
-          .filter(e => e.pos === morpheme.pos);
-        if (posEntries.length > 0) {
-          lemma = candidate;
-          definitions = posEntries.flatMap(e => e.definitions);
-          break;
+        for (const pos of dictionaryPosLookupOrder(morpheme.pos)) {
+          const posEntries = (await this.dictionary.lookupAll(candidate))
+            .filter(e => e.pos === pos);
+          if (posEntries.length > 0) {
+            lemma = candidate;
+            definitions = posEntries.flatMap(e => e.definitions);
+            break lookup;
+          }
         }
       }
 
