@@ -56,7 +56,11 @@ export interface AnalyzedEojeol {
 }
 
 export interface AnalyzedSentence {
+  /** Original sentence string before analysis. */
+  readonly surface: string;
   readonly eojeols: readonly AnalyzedEojeol[];
+  /** English gloss line built from dictionary definitions (empty when unavailable). */
+  readonly translation: string;
 }
 
 export interface AnalyzedParagraph {

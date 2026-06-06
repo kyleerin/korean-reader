@@ -8,7 +8,9 @@ export class NdjsonDictionaryRepository implements DictionaryRepository {
 
   private constructor(entries: DictionaryEntry[]) {
     for (const e of entries) {
-      this.byLemmaPos.set(`${e.lemma}\x00${e.pos}`, e);
+      const key = `${e.lemma}\x00${e.pos}`;
+      // Keep the first entry per lemma+POS — later duplicates are alternate senses.
+      if (!this.byLemmaPos.has(key)) this.byLemmaPos.set(key, e);
       const bucket = this.byLemma.get(e.lemma) ?? [];
       bucket.push(e);
       this.byLemma.set(e.lemma, bucket);

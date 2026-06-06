@@ -5,6 +5,7 @@ import type { EojeolMorphemes, MorphologicalAnalyzer } from './analyzer';
 import { reconstructLemma } from './lemma-reconstructor';
 import { classifyMorpheme } from './morpheme-classifier';
 import { segmentParagraphs } from './tokenizer';
+import { translateSentence } from './sentence-translator';
 
 /**
  * Orchestrates the full reading pipeline:
@@ -37,7 +38,8 @@ export class ReadingPipeline {
   private async analyzeSentence(sentence: string): Promise<AnalyzedSentence> {
     const eojeolMorphemesList = await this.analyzer.analyze(sentence);
     const eojeols = await Promise.all(eojeolMorphemesList.map(e => this.analyzeEojeol(e)));
-    return { eojeols };
+    const analyzed: AnalyzedSentence = { surface: sentence, eojeols, translation: '' };
+    return { ...analyzed, translation: translateSentence(analyzed) };
   }
 
   private async analyzeEojeol(raw: EojeolMorphemes): Promise<AnalyzedEojeol> {
@@ -52,16 +54,20 @@ export class ReadingPipeline {
 
     if (type === 'CONTENT') {
       const lemma = reconstructLemma(morpheme.surface, morpheme.pos);
-      const [entry, state] = await Promise.all([
-        this.dictionary.lookup(lemma, morpheme.pos),
+      const [entries, state] = await Promise.all([
+        this.dictionary.lookupAll(lemma),
         this.knowledge.getState(lemma, morpheme.pos),
       ]);
+      const posEntries = entries.filter(e => e.pos === morpheme.pos);
+      const definitions = posEntries.length > 0
+        ? posEntries.flatMap(e => e.definitions)
+        : (await this.dictionary.lookup(lemma, morpheme.pos))?.definitions ?? [];
       return {
         surface: morpheme.surface,
         lemma,
         pos: morpheme.pos,
         type,
-        definitions: entry?.definitions ?? [],
+        definitions,
         state,
         eojeolContext: context,
       };
