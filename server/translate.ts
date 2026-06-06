@@ -1,18 +1,16 @@
 export const MAX_TRANSLATION_CHARS = 12_000;
 
-const SYSTEM_PROMPT = `You are a professional Korean-to-English translator for language learners.
-Translate the user's Korean text into natural, fluent English.
-Preserve paragraph breaks (use blank lines between paragraphs).
-Output only the English translation — no notes, romanization, or commentary.`;
-
-export interface OpenAiConfig {
+export interface DeepLConfig {
   apiKey: string;
-  model?: string;
+  /** Override API host, e.g. https://api-free.deepl.com */
+  apiBase?: string;
+  sourceLang?: string;
+  targetLang?: string;
 }
 
 export interface TranslateDeps {
   fetchFn?: typeof fetch;
-  config: OpenAiConfig;
+  config: DeepLConfig;
 }
 
 export function validateTranslationInput(text: string): string {
@@ -34,28 +32,37 @@ export class TranslationError extends Error {
   }
 }
 
+/** Free DeepL keys end with :fx and use the api-free host. */
+export function deeplApiBase(apiKey: string, override?: string): string {
+  if (override) return override.replace(/\/$/, '');
+  return apiKey.endsWith(':fx')
+    ? 'https://api-free.deepl.com'
+    : 'https://api.deepl.com';
+}
+
 export async function translateKoreanText(
   text: string,
   deps: TranslateDeps,
 ): Promise<string> {
   const input = validateTranslationInput(text);
   const fetchFn = deps.fetchFn ?? fetch;
-  const model = deps.config.model ?? 'gpt-4o-mini';
+  const apiBase = deeplApiBase(deps.config.apiKey, deps.config.apiBase);
+  const sourceLang = deps.config.sourceLang ?? 'KO';
+  const targetLang = deps.config.targetLang ?? 'EN-US';
 
-  const response = await fetchFn('https://api.openai.com/v1/chat/completions', {
+  const body = new URLSearchParams({
+    text: input,
+    source_lang: sourceLang,
+    target_lang: targetLang,
+  });
+
+  const response = await fetchFn(`${apiBase}/v2/translate`, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${deps.config.apiKey}`,
-      'Content-Type': 'application/json',
+      Authorization: `DeepL-Auth-Key ${deps.config.apiKey}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
     },
-    body: JSON.stringify({
-      model,
-      temperature: 0.3,
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: input },
-      ],
-    }),
+    body: body.toString(),
   });
 
   if (!response.ok) {
@@ -67,9 +74,9 @@ export async function translateKoreanText(
   }
 
   const payload = await response.json() as {
-    choices?: { message?: { content?: string } }[];
+    translations?: { text?: string }[];
   };
-  const translation = payload.choices?.[0]?.message?.content?.trim();
-  if (!translation) throw new TranslationError('Empty translation response.', 502);
-  return translation;
+  const parts = payload.translations?.map(t => t.text?.trim()).filter(Boolean) as string[] | undefined;
+  if (!parts?.length) throw new TranslationError('Empty translation response.', 502);
+  return parts.join('\n\n');
 }

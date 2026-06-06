@@ -2,8 +2,10 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { translateKoreanText, TranslationError } from './translate.js';
 
 const PORT = Number(process.env.PORT ?? 3001);
-const API_KEY = process.env.OPENAI_API_KEY;
-const MODEL = process.env.OPENAI_MODEL;
+const API_KEY = process.env.DEEPL_API_KEY;
+const API_BASE = process.env.DEEPL_API_URL;
+const SOURCE_LANG = process.env.DEEPL_SOURCE_LANG;
+const TARGET_LANG = process.env.DEEPL_TARGET_LANG;
 
 function sendJson(res: ServerResponse, status: number, body: unknown): void {
   res.writeHead(status, {
@@ -35,7 +37,7 @@ const server = createServer(async (req, res) => {
   }
 
   if (!API_KEY) {
-    sendJson(res, 503, { error: 'Translation service is not configured (missing OPENAI_API_KEY).' });
+    sendJson(res, 503, { error: 'Translation service is not configured (missing DEEPL_API_KEY).' });
     return;
   }
 
@@ -47,7 +49,12 @@ const server = createServer(async (req, res) => {
     }
 
     const translation = await translateKoreanText(body.text, {
-      config: { apiKey: API_KEY, model: MODEL },
+      config: {
+        apiKey: API_KEY,
+        apiBase: API_BASE,
+        sourceLang: SOURCE_LANG,
+        targetLang: TARGET_LANG,
+      },
     });
     sendJson(res, 200, { translation });
   } catch (err) {
