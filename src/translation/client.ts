@@ -28,7 +28,7 @@ export async function fetchAiTranslation(text: string, apiKey: string): Promise<
   const payload = await res.json().catch(() => ({})) as { translation?: string; error?: string };
   if (!res.ok) {
     const fallback = res.status === 404
-      ? 'Translation API not found. Use npm run dev (or npm run preview) — translation is served by the Vite dev server.'
+      ? 'Translation API not found. Redeploy with api/translate (Vercel) or run npm run dev locally.'
       : `Translation request failed (${res.status})`;
     throw new TranslationClientError(
       payload.error ?? fallback,
