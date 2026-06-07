@@ -3,7 +3,7 @@ import type { DictionaryRepository } from '../dictionary/repository';
 import type { AnalyzedEojeol, AnalyzedMorpheme, AnalyzedParagraph, AnalyzedSentence, AnalyzedText, Morpheme } from '../domain/model';
 import type { KnowledgeRepository } from '../knowledge/repository';
 import type { EojeolMorphemes, MorphologicalAnalyzer } from './analyzer';
-import { lemmaCandidates } from './lemma-reconstructor';
+import { lemmaCandidates, surfaceLemmaCandidates } from './lemma-reconstructor';
 import { classifyMorpheme } from './morpheme-classifier';
 import { segmentParagraphs } from './tokenizer';
 
@@ -43,16 +43,19 @@ export class ReadingPipeline {
 
   private async analyzeEojeol(raw: EojeolMorphemes): Promise<AnalyzedEojeol> {
     const morphemes = await Promise.all(
-      raw.morphemes.map(m => this.analyzeMorpheme(m, raw.morphemes as Morpheme[]))
+      raw.morphemes.map(m => this.analyzeMorpheme(m, raw.morphemes as Morpheme[], raw.surface))
     );
     return { surface: raw.surface, morphemes };
   }
 
-  private async analyzeMorpheme(morpheme: Morpheme, context: Morpheme[]): Promise<AnalyzedMorpheme> {
+  private async analyzeMorpheme(morpheme: Morpheme, context: Morpheme[], eojeolSurface: string): Promise<AnalyzedMorpheme> {
     const type = classifyMorpheme(morpheme.pos);
 
     if (type === 'CONTENT') {
-      const candidates = lemmaCandidates(morpheme.surface, morpheme.pos);
+      const candidates = [
+        ...surfaceLemmaCandidates(eojeolSurface, morpheme.surface, morpheme.pos, context),
+        ...lemmaCandidates(morpheme.surface, morpheme.pos),
+      ].filter((lemma, index, all) => all.indexOf(lemma) === index);
       let lemma = candidates[0]!;
       let definitions: readonly string[] = [];
 
