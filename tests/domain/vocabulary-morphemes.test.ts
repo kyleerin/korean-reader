@@ -27,4 +27,16 @@ describe('vocabularyMorphemes', () => {
     expect(vocabularyMorphemes(eo).map(m => m.surface)).toEqual(['만지']);
     expect(hasNewWords(eo)).toBe(false);
   });
+
+  it('excludes mis-parsed 이민 inside 들이민다', () => {
+    const eo = eojeol('들이민다.', [
+      { surface: '들', lemma: '들이밀다', pos: 'VV', type: 'CONTENT', definitions: [], state: 'LEARNING', eojeolContext: [] },
+      { surface: 'ㄹ', lemma: 'ㄹ', pos: 'ETM', type: 'ENDING', definitions: [], state: 'NEW', eojeolContext: [] },
+      { surface: '이민', lemma: '이민', pos: 'NN', type: 'CONTENT', definitions: [], state: 'NEW', eojeolContext: [] },
+      { surface: '이', lemma: '이', pos: 'VCP', type: 'PARTICLE', definitions: [], state: 'NEW', eojeolContext: [] },
+      { surface: '다', lemma: '다', pos: 'EF', type: 'ENDING', definitions: [], state: 'NEW', eojeolContext: [] },
+    ]);
+    expect(vocabularyMorphemes(eo).map(m => m.lemma)).toEqual(['들이밀다']);
+    expect(hasNewWords(eo)).toBe(false);
+  });
 });
