@@ -98,9 +98,26 @@ export function isBoundAuxiliary(m: { surface: string; pos: PartOfSpeech }): boo
   return m.pos === 'VX' && BOUND_AUXILIARY_VX.has(m.surface);
 }
 
+/** Nouns etc. that garu-ko invents inside mis-parsed compound verbs — not real vocabulary. */
+export function isAnalyzerArtifactMorpheme(
+  eojeolSurface: string,
+  morpheme: { surface: string; pos: PartOfSpeech },
+): boolean {
+  const bare = eojeolSurface.replace(/[.!?…]+$/u, '');
+  // 들이민다 → 들 + 이민(immigration); only the verb is vocabulary.
+  if (morpheme.surface === '이민' && morpheme.pos === 'NN' && /^들이민|^들이밀/.test(bare)) {
+    return true;
+  }
+  return false;
+}
+
 /** Content morphemes that represent trackable vocabulary (excludes bound auxiliaries). */
 export function vocabularyMorphemes(eojeol: AnalyzedEojeol): AnalyzedMorpheme[] {
-  return eojeol.morphemes.filter(m => m.type === 'CONTENT' && !isBoundAuxiliary(m));
+  return eojeol.morphemes.filter(m =>
+    m.type === 'CONTENT'
+    && !isBoundAuxiliary(m)
+    && !isAnalyzerArtifactMorpheme(eojeol.surface, m),
+  );
 }
 
 export function hasNewWords(eojeol: AnalyzedEojeol): boolean {
