@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { lemmaCandidates, reconstructLemma } from '../../src/pipeline/lemma-reconstructor';
+import { lemmaCandidates, reconstructLemma, surfaceLemmaCandidates } from '../../src/pipeline/lemma-reconstructor';
 
 describe('reconstructLemma', () => {
   it('appends 다 to verb stems', () => {
@@ -48,5 +48,23 @@ describe('lemmaCandidates', () => {
 
   it('lists the primary lemma before the 으-stripped alternate', () => {
     expect(lemmaCandidates('모으', 'VV')).toEqual(['모으다', '모다']);
+  });
+});
+
+describe('surfaceLemmaCandidates', () => {
+  const context = [
+    { surface: '들', pos: 'VV' as const },
+    { surface: 'ㄹ', pos: 'ETM' as const },
+    { surface: '이민', pos: 'NN' as const },
+    { surface: '이', pos: 'VCP' as const },
+    { surface: '다', pos: 'EF' as const },
+  ];
+
+  it('recovers 들이밀다 from 들이민다 when the analyzer splits wrongly', () => {
+    expect(surfaceLemmaCandidates('들이민다.', '들', 'VV', context)).toEqual(['들이밀다']);
+  });
+
+  it('ignores non-head predicates in the eojeol', () => {
+    expect(surfaceLemmaCandidates('들이민다.', '이', 'VCP', context)).toEqual([]);
   });
 });

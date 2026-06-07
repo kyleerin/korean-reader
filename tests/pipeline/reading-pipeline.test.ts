@@ -95,6 +95,38 @@ describe('ReadingPipeline', () => {
     expect(see.definitions).toEqual(['to see; to try doing']);
   });
 
+  it('resolves 들이민다 to 들이밀다 when the analyzer mis-splits the compound verb', async () => {
+    const sentence = '코를 들이민다.';
+    const analysis: EojeolMorphemes[] = [
+      { surface: '코를', morphemes: [{ surface: '코', pos: 'NN' }, { surface: '를', pos: 'JKO' }] },
+      {
+        surface: '들이민다.',
+        morphemes: [
+          { surface: '들', pos: 'VV' },
+          { surface: 'ㄹ', pos: 'ETM' },
+          { surface: '이민', pos: 'NN' },
+          { surface: '이', pos: 'VCP' },
+          { surface: '다', pos: 'EF' },
+          { surface: '.', pos: 'SF' },
+        ],
+      },
+    ];
+    const dict = new InMemoryDictionaryRepository([
+      [['코', 'NN'], { lemma: '코', pos: 'NN', definitions: ['nose'] }],
+      [['들다', 'VV'], { lemma: '들다', pos: 'VV', definitions: ['to enter'] }],
+      [['들이밀다', 'VV'], { lemma: '들이밀다', pos: 'VV', definitions: ['to thrust in'] }],
+    ]);
+    const thrustPipeline = new ReadingPipeline(
+      new FakeMorphologicalAnalyzer(new Map([[sentence, analysis]])),
+      dict,
+      knowledge,
+    );
+    const { sentences } = await thrustPipeline.analyze(sentence);
+    const thrust = contentMorphemes(sentences[0]!.eojeols[1]!)[0]!;
+    expect(thrust.lemma).toBe('들이밀다');
+    expect(thrust.definitions).toEqual(['to thrust in']);
+  });
+
   it('resolves epenthetic 으 stems to the dictionary lemma', async () => {
     const flySentence = '햇빛이 날아든다.';
     const flyAnalysis: EojeolMorphemes[] = [

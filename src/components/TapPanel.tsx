@@ -97,6 +97,11 @@ interface BreakdownItem {
 }
 
 function buildBreakdown(morpheme: AnalyzedMorpheme): BreakdownItem[] | null {
+  // garu-ko sometimes mis-tags 이민 (immigration) inside 들이밀다 conjugations.
+  if (morpheme.eojeolContext.some(m => m.surface === '이민' && m.pos === 'NN')) {
+    return null;
+  }
+
   const items: BreakdownItem[] = [];
   let usedSelf = false;
   let hasGrammatical = false;

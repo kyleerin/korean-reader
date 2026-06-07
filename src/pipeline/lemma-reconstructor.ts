@@ -4,6 +4,42 @@ const PREDICATE_POS = new Set<PartOfSpeech>([
   'VV', 'VA', 'VX', 'VCP', 'VCN', 'XSV', 'XSA',
 ]);
 
+/** Eojeol-surface patterns where the analyzer often splits compound verbs incorrectly. */
+const SURFACE_COMPOUND_LEMMAS: { pattern: RegExp; lemma: string }[] = [
+  { pattern: /^들이밀/, lemma: '들이밀다' },
+  { pattern: /^들이민/, lemma: '들이밀다' },
+];
+
+function bareEojeol(surface: string): string {
+  return surface.replace(/[.!?…]+$/u, '');
+}
+
+export function isHeadPredicate(surface: string, pos: PartOfSpeech, context: { surface: string; pos: PartOfSpeech }[]): boolean {
+  if (!PREDICATE_POS.has(pos)) return false;
+  const first = context.find(m => PREDICATE_POS.has(m.pos));
+  return first?.surface === surface && first.pos === pos;
+}
+
+/**
+ * Recover dictionary lemmas from the full eojeol when MeCab/garu-ko splits compound
+ * predicates wrongly (e.g. 들이민다 → 들 + 이민).
+ */
+export function surfaceLemmaCandidates(
+  eojeolSurface: string,
+  morphemeSurface: string,
+  pos: PartOfSpeech,
+  context: { surface: string; pos: PartOfSpeech }[],
+): string[] {
+  if (!isHeadPredicate(morphemeSurface, pos, context)) return [];
+
+  const bare = bareEojeol(eojeolSurface);
+  const candidates: string[] = [];
+  for (const { pattern, lemma } of SURFACE_COMPOUND_LEMMAS) {
+    if (pattern.test(bare)) candidates.push(lemma);
+  }
+  return candidates;
+}
+
 /**
  * Converts a morpheme surface form to its dictionary (lemma) form.
  *
