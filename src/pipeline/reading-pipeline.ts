@@ -3,7 +3,7 @@ import type { DictionaryRepository } from '../dictionary/repository';
 import type { AnalyzedEojeol, AnalyzedMorpheme, AnalyzedParagraph, AnalyzedSentence, AnalyzedText, Morpheme } from '../domain/model';
 import type { KnowledgeRepository } from '../knowledge/repository';
 import type { EojeolMorphemes, MorphologicalAnalyzer } from './analyzer';
-import { lemmaCandidates, surfaceLemmaCandidates } from './lemma-reconstructor';
+import { lemmaCandidates, nativeNumeralNrLemma, surfaceLemmaCandidates } from './lemma-reconstructor';
 import { classifyMorpheme } from './morpheme-classifier';
 import { segmentParagraphs } from './tokenizer';
 
@@ -62,11 +62,16 @@ export class ReadingPipeline {
 
       lookup:
       for (const candidate of candidates) {
-        for (const pos of dictionaryPosLookupOrder(morpheme.pos)) {
+        const nrLemma = nativeNumeralNrLemma(morpheme.surface, morpheme.pos);
+        const posOrder = nrLemma && candidate === nrLemma
+          ? (['NR', morpheme.pos] as const)
+          : dictionaryPosLookupOrder(morpheme.pos);
+
+        for (const pos of posOrder) {
           const posEntries = (await this.dictionary.lookupAll(candidate))
             .filter(e => e.pos === pos);
           if (posEntries.length > 0) {
-            lemma = candidate;
+            lemma = candidate === nrLemma ? morpheme.surface : candidate;
             definitions = posEntries.flatMap(e => e.definitions);
             examples = posEntries.flatMap(e => e.examples ?? []);
             break lookup;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { lemmaCandidates, reconstructLemma, surfaceLemmaCandidates } from '../../src/pipeline/lemma-reconstructor';
+import { lemmaCandidates, nativeNumeralNrLemma, reconstructLemma, surfaceLemmaCandidates } from '../../src/pipeline/lemma-reconstructor';
 
 describe('reconstructLemma', () => {
   it('appends 다 to verb stems', () => {
@@ -48,6 +48,20 @@ describe('lemmaCandidates', () => {
 
   it('lists the primary lemma before the 으-stripped alternate', () => {
     expect(lemmaCandidates('모으', 'VV')).toEqual(['모으다', '모다']);
+  });
+
+  it('includes the NR count-noun form for native numeral determiners', () => {
+    expect(lemmaCandidates('두', 'MM')).toEqual(['두', '둘']);
+  });
+});
+
+describe('nativeNumeralNrLemma', () => {
+  it('maps 두 to 둘', () => {
+    expect(nativeNumeralNrLemma('두', 'MM')).toBe('둘');
+  });
+
+  it('returns undefined for non-numeral modifiers', () => {
+    expect(nativeNumeralNrLemma('성공적', 'MM')).toBeUndefined();
   });
 });
 

@@ -73,6 +73,30 @@ describe('ReadingPipeline', () => {
     expect(eat.lemma).toBe('먹다');
   });
 
+  it('resolves native numeral determiner 두 via NR lemma 둘 when MM is missing', async () => {
+    const sentence = '아몬드를 두 개 가지고 있다.';
+    const analysis: EojeolMorphemes[] = [
+      { surface: '아몬드를', morphemes: [{ surface: '아몬드', pos: 'NN' }, { surface: '를', pos: 'JKO' }] },
+      { surface: '두', morphemes: [{ surface: '두', pos: 'MM' }] },
+      { surface: '개', morphemes: [{ surface: '개', pos: 'NNB' }] },
+      { surface: '가지고', morphemes: [{ surface: '가지', pos: 'VV' }, { surface: '고', pos: 'EC' }] },
+      { surface: '있다.', morphemes: [{ surface: '있', pos: 'VX' }, { surface: '다', pos: 'EF' }, { surface: '.', pos: 'SF' }] },
+    ];
+    const dict = new InMemoryDictionaryRepository([
+      [['둘', 'NR'], { lemma: '둘', pos: 'NR', definitions: ['two'], examples: ['자식이 둘이다.'] }],
+    ]);
+    const numeralPipeline = new ReadingPipeline(
+      new FakeMorphologicalAnalyzer(new Map([[sentence, analysis]])),
+      dict,
+      knowledge,
+    );
+    const { sentences } = await numeralPipeline.analyze(sentence);
+    const two = contentMorphemes(sentences[0]!.eojeols[1]!)[0]!;
+    expect(two.surface).toBe('두');
+    expect(two.lemma).toBe('두');
+    expect(two.definitions).toEqual(['two']);
+  });
+
   it('falls back from VX to VV for auxiliary verbs like 보다', async () => {
     const sentence = '느껴 본다.';
     const analysis: EojeolMorphemes[] = [
