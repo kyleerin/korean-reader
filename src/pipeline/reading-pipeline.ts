@@ -58,6 +58,7 @@ export class ReadingPipeline {
       ].filter((lemma, index, all) => all.indexOf(lemma) === index);
       let lemma = candidates[0]!;
       let definitions: readonly string[] = [];
+      let examples: readonly string[] = [];
 
       lookup:
       for (const candidate of candidates) {
@@ -67,6 +68,7 @@ export class ReadingPipeline {
           if (posEntries.length > 0) {
             lemma = candidate;
             definitions = posEntries.flatMap(e => e.definitions);
+            examples = posEntries.flatMap(e => e.examples ?? []);
             break lookup;
           }
         }
@@ -79,6 +81,7 @@ export class ReadingPipeline {
         pos: morpheme.pos,
         type,
         definitions,
+        examples: examples.length > 0 ? examples : undefined,
         state,
         eojeolContext: context,
       };

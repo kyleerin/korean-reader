@@ -45,6 +45,7 @@ export interface AnalyzedMorpheme {
   readonly pos: PartOfSpeech;
   readonly type: MorphemeType;
   readonly definitions: readonly string[];
+  readonly examples?: readonly string[];
   readonly state: KnowledgeState;
   /** All morphemes in the parent eojeol — used for the tap-time conjugation explainer. */
   readonly eojeolContext: readonly Morpheme[];
