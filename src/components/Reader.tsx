@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import type { AnalyzedEojeol, AnalyzedMorpheme, AnalyzedSentence, AnalyzedText, KnowledgeState } from '../domain/model';
 import type { KnowledgeRepository } from '../knowledge/repository';
 import type { ReviewRepository } from '../review/repository';
 import { hasNewWords, isFullyKnown, vocabularyMorphemes } from '../domain/model';
+import { hasActiveTextSelection, useReadingTextSelection } from '../hooks/useReadingTextSelection';
+import { useLongPress } from '../hooks/useLongPress';
 import { useDeepLSettings, DeepLSettingsButton } from '../translation/DeepLSettings';
 import { resolveTextSelection, type TextSelection } from '../selection/resolve';
 import { AiTranslation } from './AiTranslation';
@@ -36,10 +38,12 @@ function needsFallback(eojeol: AnalyzedEojeol): boolean {
 function ContentSpan({
   morpheme,
   knowledge,
+  readingRef,
   onTap,
 }: {
   morpheme: AnalyzedMorpheme;
   knowledge: KnowledgeRepository;
+  readingRef: RefObject<HTMLElement | null>;
   onTap: (m: AnalyzedMorpheme, s: KnowledgeState) => void;
 }) {
   const [state, setState] = useState<KnowledgeState>(morpheme.state);
@@ -51,7 +55,10 @@ function ContentSpan({
 
   return (
     <span
-      onClick={() => onTap(morpheme, state)}
+      onClick={() => {
+        if (hasActiveTextSelection(readingRef.current)) return;
+        onTap(morpheme, state);
+      }}
       style={{ color: STATE_COLOR[state], cursor: 'pointer', borderRadius: '3px', padding: '0 1px' }}
     >
       {morpheme.surface}
@@ -62,17 +69,19 @@ function ContentSpan({
 function StandardEojeol({
   eojeol,
   knowledge,
+  readingRef,
   onTap,
 }: {
   eojeol: AnalyzedEojeol;
   knowledge: KnowledgeRepository;
+  readingRef: RefObject<HTMLElement | null>;
   onTap: (m: AnalyzedMorpheme, s: KnowledgeState) => void;
 }) {
   return (
     <>
       {eojeol.morphemes.map((m, i) => {
         if (m.type === 'CONTENT') {
-          return <ContentSpan key={i} morpheme={m} knowledge={knowledge} onTap={onTap} />;
+          return <ContentSpan key={i} morpheme={m} knowledge={knowledge} readingRef={readingRef} onTap={onTap} />;
         }
         if (m.type === 'PUNCTUATION' || m.type === 'FOREIGN' || m.type === 'UNKNOWN') {
           return <span key={i}>{m.surface}</span>;
@@ -104,10 +113,12 @@ function fallbackSegments(eojeol: AnalyzedEojeol, headColor: string | undefined)
 function FallbackEojeol({
   eojeol,
   knowledge,
+  readingRef,
   onTap,
 }: {
   eojeol: AnalyzedEojeol;
   knowledge: KnowledgeRepository;
+  readingRef: RefObject<HTMLElement | null>;
   onTap: (m: AnalyzedMorpheme, s: KnowledgeState) => void;
 }) {
   const vocabMorphemes = vocabularyMorphemes(eojeol);
@@ -138,6 +149,7 @@ function FallbackEojeol({
   }
 
   function handleClick() {
+    if (hasActiveTextSelection(readingRef.current)) return;
     const primary = vocabMorphemes[0]!;
     const state = statesMap.get(`${primary.lemma}\x00${primary.pos}`) ?? primary.state;
     onTap(primary, state);
@@ -154,25 +166,53 @@ function FallbackEojeol({
   );
 }
 
+function EojeolShell({
+  eojeol,
+  onExplain,
+  children,
+}: {
+  eojeol: AnalyzedEojeol;
+  onExplain: (e: AnalyzedEojeol) => void;
+  children: ReactNode;
+}) {
+  const longPress = useLongPress(() => onExplain(eojeol), 450);
+
+  return (
+    <span
+      className="eojeol"
+      onTouchStart={longPress.onTouchStart}
+      onTouchEnd={longPress.onTouchEnd}
+      onTouchMove={longPress.onTouchMove}
+      onClickCapture={longPress.onClickCapture}
+    >
+      {children}
+    </span>
+  );
+}
+
 function KoreanSentence({
   sentence,
   knowledge,
+  readingRef,
   onTap,
+  onExplainEojeol,
 }: {
   sentence: AnalyzedSentence;
   knowledge: KnowledgeRepository;
+  readingRef: RefObject<HTMLElement | null>;
   onTap: (m: AnalyzedMorpheme, s: KnowledgeState) => void;
+  onExplainEojeol: (e: AnalyzedEojeol) => void;
 }) {
   return (
     <>
       {sentence.eojeols.map((eojeol, ei) => (
-        <span key={ei}>
+        <EojeolShell key={ei} eojeol={eojeol} onExplain={onExplainEojeol}>
           {needsFallback(eojeol)
-            ? <FallbackEojeol eojeol={eojeol} knowledge={knowledge} onTap={onTap} />
-            : <StandardEojeol eojeol={eojeol} knowledge={knowledge} onTap={onTap} />
+            ? <FallbackEojeol eojeol={eojeol} knowledge={knowledge} readingRef={readingRef} onTap={onTap} />
+            : <StandardEojeol eojeol={eojeol} knowledge={knowledge} readingRef={readingRef} onTap={onTap} />
           }
           {ei < sentence.eojeols.length - 1 ? ' ' : ''}
-        </span>
+        </EojeolShell>
       ))}
     </>
   );
@@ -185,25 +225,19 @@ export function Reader({ text, sourceText, knowledge, reviewRepo, onBack }: Prop
   const { apiKey, hasApiKey } = useDeepLSettings();
   const readingRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    function handleMouseUp() {
-      const sel = window.getSelection();
-      if (!sel || sel.isCollapsed || !readingRef.current) return;
-      if (!readingRef.current.contains(sel.anchorNode)) return;
-
-      const raw = sel.toString().trim();
-      if (raw.length < 2) return;
-
-      const resolved = resolveTextSelection(text, raw);
-      if (!resolved) return;
-
-      setSelected(null);
-      setTextSelection(resolved);
-    }
-
-    document.addEventListener('mouseup', handleMouseUp);
-    return () => document.removeEventListener('mouseup', handleMouseUp);
+  const handleExplainEojeol = useCallback((eojeol: AnalyzedEojeol) => {
+    const resolved = resolveTextSelection(text, eojeol.surface);
+    if (!resolved) return;
+    window.getSelection()?.removeAllRanges();
+    setSelected(null);
+    setTextSelection(resolved);
   }, [text]);
+
+  useReadingTextSelection(readingRef, text, (resolved) => {
+    if (resolved.selectedText.length < 2) return;
+    setSelected(null);
+    setTextSelection(resolved);
+  });
 
   async function handleMark(newState: KnowledgeState) {
     if (!selected) return;
@@ -236,14 +270,15 @@ export function Reader({ text, sourceText, knowledge, reviewRepo, onBack }: Prop
           {newCount} new · {knownCount} known eojeols
         </span>
         <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
-          Select text for grammar
+          Long-press or select text for grammar
         </span>
         <DeepLSettingsButton />
       </div>
 
       <div
         ref={readingRef}
-        style={{ fontSize: '1.1rem', lineHeight: 2, letterSpacing: '0.02em', display: 'flex', flexDirection: 'column', gap: '1rem', userSelect: 'text', cursor: 'text' }}
+        className="reader-text"
+        style={{ fontSize: '1.1rem', lineHeight: 2, letterSpacing: '0.02em', display: 'flex', flexDirection: 'column', gap: '1rem' }}
       >
         {text.paragraphs.map((paragraph, pi) => (
           <p key={pi} style={{ margin: 0 }}>
@@ -252,6 +287,8 @@ export function Reader({ text, sourceText, knowledge, reviewRepo, onBack }: Prop
                 <KoreanSentence
                   sentence={sentence}
                   knowledge={knowledge}
+                  readingRef={readingRef}
+                  onExplainEojeol={handleExplainEojeol}
                   onTap={(m, s) => {
                     setTextSelection(null);
                     setSelected({ morpheme: m, state: s });
