@@ -16599,6 +16599,7 @@
 {"lemma":"둔화","pos":"NN","definitions":["Slowing of progress or the reaction to something."],"examples":["현재 우리 경제는 물가 불안과 수출 둔화로 인해 여러 가지 어려움을 겪고 있다.","나이가 들면 미각의 둔화로 자극적인 음식을 섭취해야만 음식 맛을 느끼게 된다."]}
 {"lemma":"둔화되다","pos":"VV","definitions":["For progress or reaction to become slow."],"examples":["출생률이 감소함에 따라 인구 증가율이 둔화되었다.","소비자들의 과소비로 인해 저축 증가율이 둔화되고 있다."]}
 {"lemma":"둔화시키다","pos":"VV","definitions":["To make progress or reaction become slow."],"examples":["물가가 오르면서 소비 증가율을 둔화시켰다.","이 약을 먹으면 통증에 대한 감각을 둔화시켜 준다."]}
+{"lemma": "두", "pos": "MM", "definitions": ["Being the number that is the sum of one and one."], "examples": ["누구나 머릿속에 아몬드를 두 개 가지고 있다.", "식탁 위에 사과가 두 개 놓여 있었다.", "승규는 연필 두 자루를 책가방에 넣었다."]}
 {"lemma":"둘","pos":"NR","definitions":["The cardinal number equal to the sum of 1 + 1."],"examples":["셋에서 둘을 빼면 하나이다.","나는 아들 하나와 딸 하나로 자식이 둘이다."]}
 {"lemma":"둘둘","pos":"MAG","definitions":["A word imitating the sound or describing the movement of a big, round object rolling fast and lightly.","A word describing the movement of a big object rolling up in several layers."],"examples":["아버지가 손수레를 끌자 고무바퀴가 둘둘 굴러갔다.","남자가 던진 돌은 둘둘 굴러 언덕 아래까지 내려갔다.","아저씨는 수건을 둘둘 말아 베고 누웠다."]}
 {"lemma":"둘러대다","pos":"VV","definitions":["To prepare money or goods that one is short of, by borrowing or obtaining it elsewhere.","To deceive someone by making up a plausible story.","To wrap something around something else once and place it there."],"examples":["돈을 이리저리 둘러대 겨우 사업 자금을 마련했다.","급히 돈이 좀 필요한데 어디서 돈 좀 둘러댈 데가 없을까?","나는 친구의 부탁을 들어 주기 싫어서 적당히 변명을 둘러댔다."]}

@@ -1,5 +1,10 @@
 import type { PartOfSpeech } from '../domain/model';
 
+/** Native-Korean numeral determiners (MM) whose count-noun form (NR) is in the dictionary. */
+const NATIVE_NUMERAL_NR_LEMMA: Readonly<Record<string, string>> = {
+  '두': '둘',
+};
+
 const PREDICATE_POS = new Set<PartOfSpeech>([
   'VV', 'VA', 'VX', 'VCP', 'VCN', 'XSV', 'XSA',
 ]);
@@ -61,12 +66,21 @@ export function reconstructLemma(surface: string, pos: PartOfSpeech): string {
  */
 export function lemmaCandidates(surface: string, pos: PartOfSpeech): string[] {
   const primary = reconstructLemma(surface, pos);
-  if (!PREDICATE_POS.has(pos)) return [primary];
-
   const candidates = [primary];
+
+  const nrLemma = nativeNumeralNrLemma(surface, pos);
+  if (nrLemma && nrLemma !== primary) candidates.push(nrLemma);
+
+  if (!PREDICATE_POS.has(pos)) return candidates;
+
   if (surface.endsWith('으') && surface.length > 1) {
     const alternate = reconstructLemma(surface.slice(0, -1), pos);
     if (alternate !== primary) candidates.push(alternate);
   }
   return candidates;
+}
+
+export function nativeNumeralNrLemma(surface: string, pos: PartOfSpeech): string | undefined {
+  if (pos !== 'MM') return undefined;
+  return NATIVE_NUMERAL_NR_LEMMA[surface];
 }
