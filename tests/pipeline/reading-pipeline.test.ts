@@ -112,9 +112,9 @@ describe('ReadingPipeline', () => {
       },
     ];
     const dict = new InMemoryDictionaryRepository([
-      [['코', 'NN'], { lemma: '코', pos: 'NN', definitions: ['nose'] }],
+      [['코', 'NN'], { lemma: '코', pos: 'NN', definitions: ['nose'], examples: ['코가 높다.'] }],
       [['들다', 'VV'], { lemma: '들다', pos: 'VV', definitions: ['to enter'] }],
-      [['들이밀다', 'VV'], { lemma: '들이밀다', pos: 'VV', definitions: ['to thrust in'] }],
+      [['들이밀다', 'VV'], { lemma: '들이밀다', pos: 'VV', definitions: ['to thrust in'], examples: ['얼굴을 들이밀다.'] }],
     ]);
     const thrustPipeline = new ReadingPipeline(
       new FakeMorphologicalAnalyzer(new Map([[sentence, analysis]])),
@@ -125,6 +125,7 @@ describe('ReadingPipeline', () => {
     const thrust = contentMorphemes(sentences[0]!.eojeols[1]!)[0]!;
     expect(thrust.lemma).toBe('들이밀다');
     expect(thrust.definitions).toEqual(['to thrust in']);
+    expect(thrust.examples).toEqual(['얼굴을 들이밀다.']);
   });
 
   it('resolves epenthetic 으 stems to the dictionary lemma', async () => {

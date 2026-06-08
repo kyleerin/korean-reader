@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { AnalyzedEojeol, AnalyzedMorpheme, AnalyzedSentence, AnalyzedText, KnowledgeState } from '../domain/model';
 import type { KnowledgeRepository } from '../knowledge/repository';
 import type { ReviewRepository } from '../review/repository';
 import { hasNewWords, isFullyKnown, vocabularyMorphemes } from '../domain/model';
 import { useDeepLSettings, DeepLSettingsButton } from '../translation/DeepLSettings';
+import { resolveTextSelection, type TextSelection } from '../selection/resolve';
 import { AiTranslation } from './AiTranslation';
+import { SelectionPanel } from './SelectionPanel';
 import { TapPanel } from './TapPanel';
 
 interface Props {
@@ -178,8 +180,30 @@ function KoreanSentence({
 
 export function Reader({ text, sourceText, knowledge, reviewRepo, onBack }: Props) {
   const [selected, setSelected] = useState<{ morpheme: AnalyzedMorpheme; state: KnowledgeState } | null>(null);
+  const [textSelection, setTextSelection] = useState<TextSelection | null>(null);
   const [showTranslation, setShowTranslation] = useState(false);
   const { apiKey, hasApiKey } = useDeepLSettings();
+  const readingRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleMouseUp() {
+      const sel = window.getSelection();
+      if (!sel || sel.isCollapsed || !readingRef.current) return;
+      if (!readingRef.current.contains(sel.anchorNode)) return;
+
+      const raw = sel.toString().trim();
+      if (raw.length < 2) return;
+
+      const resolved = resolveTextSelection(text, raw);
+      if (!resolved) return;
+
+      setSelected(null);
+      setTextSelection(resolved);
+    }
+
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => document.removeEventListener('mouseup', handleMouseUp);
+  }, [text]);
 
   async function handleMark(newState: KnowledgeState) {
     if (!selected) return;
@@ -200,7 +224,7 @@ export function Reader({ text, sourceText, knowledge, reviewRepo, onBack }: Prop
   const knownCount = allEojeols.filter(isFullyKnown).length;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', paddingBottom: '8rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', paddingBottom: textSelection || selected ? '14rem' : '8rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
         <button
           onClick={onBack}
@@ -211,10 +235,16 @@ export function Reader({ text, sourceText, knowledge, reviewRepo, onBack }: Prop
         <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
           {newCount} new · {knownCount} known eojeols
         </span>
+        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+          Select text for grammar
+        </span>
         <DeepLSettingsButton />
       </div>
 
-      <div style={{ fontSize: '1.1rem', lineHeight: 2, letterSpacing: '0.02em', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      <div
+        ref={readingRef}
+        style={{ fontSize: '1.1rem', lineHeight: 2, letterSpacing: '0.02em', display: 'flex', flexDirection: 'column', gap: '1rem', userSelect: 'text', cursor: 'text' }}
+      >
         {text.paragraphs.map((paragraph, pi) => (
           <p key={pi} style={{ margin: 0 }}>
             {paragraph.sentences.map((sentence, si) => (
@@ -222,7 +252,10 @@ export function Reader({ text, sourceText, knowledge, reviewRepo, onBack }: Prop
                 <KoreanSentence
                   sentence={sentence}
                   knowledge={knowledge}
-                  onTap={(m, s) => setSelected({ morpheme: m, state: s })}
+                  onTap={(m, s) => {
+                    setTextSelection(null);
+                    setSelected({ morpheme: m, state: s });
+                  }}
                 />
                 {' '}
               </span>
@@ -256,7 +289,14 @@ export function Reader({ text, sourceText, knowledge, reviewRepo, onBack }: Prop
         />
       )}
 
-      {selected && (
+      {textSelection && (
+        <SelectionPanel
+          selection={textSelection}
+          onClose={() => setTextSelection(null)}
+        />
+      )}
+
+      {selected && !textSelection && (
         <TapPanel
           morpheme={selected.morpheme}
           currentState={selected.state}
