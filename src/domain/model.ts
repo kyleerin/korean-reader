@@ -106,7 +106,7 @@ export function isAnalyzerArtifactMorpheme(
 ): boolean {
   const bare = eojeolSurface.replace(/[.!?。！？…,，]+$/u, '');
   // 못한다기보단 → 못 + 하 + ㄴ다 + 기보 + 단; only 못하다 is vocabulary.
-  if (bare.startsWith('못하') && morpheme.surface === '못' && morpheme.pos === 'MAG') {
+  if (/^못(?:하|한|해|했|할|함|합)/.test(bare) && morpheme.surface === '못' && morpheme.pos === 'MAG') {
     return true;
   }
   if (bare.endsWith('기보단') && (morpheme.pos === 'NN' || morpheme.pos === 'NNP')) {

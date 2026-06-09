@@ -13,7 +13,7 @@ const PREDICATE_POS = new Set<PartOfSpeech>([
 const SURFACE_COMPOUND_LEMMAS: { pattern: RegExp; lemma: string }[] = [
   { pattern: /^들이밀/, lemma: '들이밀다' },
   { pattern: /^들이민/, lemma: '들이밀다' },
-  { pattern: /^못하/, lemma: '못하다' },
+  { pattern: /^못(?:하|한|해|했|할|함|합)/, lemma: '못하다' },
 ];
 
 function bareEojeol(surface: string): string {
