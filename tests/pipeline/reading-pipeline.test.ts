@@ -3,7 +3,7 @@ import { ReadingPipeline } from '../../src/pipeline/reading-pipeline';
 import { FakeMorphologicalAnalyzer } from '../fakes/fake-analyzer';
 import { InMemoryDictionaryRepository } from '../fakes/in-memory-dictionary';
 import { InMemoryKnowledgeRepository } from '../fakes/in-memory-knowledge';
-import { contentMorphemes, hasNewWords, isFullyKnown, totalEojeols, uniqueContentWords } from '../../src/domain/model';
+import { contentMorphemes, hasNewWords, isFullyKnown, totalEojeols, uniqueContentWords, vocabularyMorphemes } from '../../src/domain/model';
 import type { EojeolMorphemes } from '../../src/pipeline/analyzer';
 
 /**
@@ -244,6 +244,36 @@ describe('ReadingPipeline', () => {
     const { sentences } = await pipeline.analyze(SENTENCE);
     const eat = contentMorphemes(sentences[0]!.eojeols[2]!)[0]!;
     expect(eat.state).toBe('LEARNING');
+  });
+
+  it('does not treat garu-ko suffix artifacts in 어딘가가 as new vocabulary', async () => {
+    const sentence = '어딘가가 고장 났다.';
+    const analysis: EojeolMorphemes[] = [
+      {
+        surface: '어딘가가',
+        morphemes: [
+          { surface: '어디', pos: 'NP' },
+          { surface: 'ㄴ', pos: 'JX' },
+          { surface: '가가', pos: 'NNP' },
+        ],
+      },
+      { surface: '고장', morphemes: [{ surface: '고장', pos: 'NN' }] },
+      { surface: '났다.', morphemes: [{ surface: '나', pos: 'VV' }, { surface: '았', pos: 'EP' }, { surface: '다', pos: 'EF' }, { surface: '.', pos: 'SF' }] },
+    ];
+    const dict = new InMemoryDictionaryRepository([
+      [['어디', 'NP'], { lemma: '어디', pos: 'NP', definitions: ['where'] }],
+    ]);
+    await knowledge.setState('어디', 'NP', 'KNOWN');
+    const artifactPipeline = new ReadingPipeline(
+      new FakeMorphologicalAnalyzer(new Map([[sentence, analysis]])),
+      dict,
+      knowledge,
+    );
+    const { sentences } = await artifactPipeline.analyze(sentence);
+    const somewhere = sentences[0]!.eojeols[0]!;
+    expect(vocabularyMorphemes(somewhere).map(m => m.lemma)).toEqual(['어디']);
+    expect(hasNewWords(somewhere)).toBe(false);
+    expect(isFullyKnown(somewhere)).toBe(true);
   });
 
   // ── Eojeol helpers ─────────────────────────────────────────────────────────
