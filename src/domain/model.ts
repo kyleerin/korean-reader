@@ -109,6 +109,11 @@ export function isAnalyzerArtifactMorpheme(
   if (morpheme.surface === '이민' && morpheme.pos === 'NN' && /^들이민|^들이밀/.test(bare)) {
     return true;
   }
+  // 어딘가가 → 어디 + ㄴ + 가가; the fused suffix chunk is not a separate vocab item.
+  if ((morpheme.pos === 'NN' || morpheme.pos === 'NNP') && /^어딘가/.test(bare)) {
+    const suffix = bare.slice('어딘'.length);
+    return morpheme.surface.startsWith('가') && suffix.startsWith(morpheme.surface);
+  }
   return false;
 }
 

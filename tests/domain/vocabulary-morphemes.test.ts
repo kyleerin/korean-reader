@@ -39,4 +39,14 @@ describe('vocabularyMorphemes', () => {
     expect(vocabularyMorphemes(eo).map(m => m.lemma)).toEqual(['들이밀다']);
     expect(hasNewWords(eo)).toBe(false);
   });
+
+  it('excludes analyzer suffix artifacts in 어딘가가', () => {
+    const eo = eojeol('어딘가가', [
+      { surface: '어디', lemma: '어디', pos: 'NP', type: 'CONTENT', definitions: [], state: 'KNOWN', eojeolContext: [] },
+      { surface: 'ㄴ', lemma: 'ㄴ', pos: 'JX', type: 'PARTICLE', definitions: [], state: 'NEW', eojeolContext: [] },
+      { surface: '가가', lemma: '가가', pos: 'NNP', type: 'CONTENT', definitions: [], state: 'NEW', eojeolContext: [] },
+    ]);
+    expect(vocabularyMorphemes(eo).map(m => m.lemma)).toEqual(['어디']);
+    expect(hasNewWords(eo)).toBe(false);
+  });
 });
