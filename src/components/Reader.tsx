@@ -276,10 +276,7 @@ export function Reader({ text, sourceText, knowledge, reviewRepo, onBack }: Prop
     setIsFinishing(true);
 
     try {
-      const currentNewWords = (await Promise.all(uniqueVocabularyMorphemes(text).map(async (morpheme) => {
-        const state = await knowledge.getState(morpheme.lemma, morpheme.pos);
-        return state === 'NEW' ? morpheme : null;
-      }))).filter((morpheme): morpheme is AnalyzedMorpheme => morpheme !== null);
+      const currentNewWords = vocabulary.filter(morpheme => stateFor(morpheme) === 'NEW');
 
       await Promise.all(currentNewWords.map(async (morpheme) => {
         await knowledge.setState(morpheme.lemma, morpheme.pos, 'KNOWN');
