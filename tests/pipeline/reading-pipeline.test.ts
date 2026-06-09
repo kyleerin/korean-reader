@@ -175,6 +175,48 @@ describe('ReadingPipeline', () => {
     expect(thrust.examples).toEqual(['얼굴을 들이밀다.']);
   });
 
+  it('treats 못한다기보단 as the predicate 못하다 for vocabulary and tap details', async () => {
+    const sentence = '표현을 못한다기보단, 잘 느끼질 못한다.';
+    const analysis: EojeolMorphemes[] = [
+      { surface: '표현을', morphemes: [{ surface: '표현', pos: 'NN' }, { surface: '을', pos: 'JKO' }] },
+      {
+        surface: '못한다기보단,',
+        morphemes: [
+          { surface: '못', pos: 'MAG' },
+          { surface: '하', pos: 'VV' },
+          { surface: 'ㄴ다', pos: 'EF' },
+          { surface: '기보', pos: 'NN' },
+          { surface: '단', pos: 'NN' },
+          { surface: ',', pos: 'SP' },
+        ],
+      },
+      { surface: '잘', morphemes: [{ surface: '잘', pos: 'MAG' }] },
+      { surface: '느끼질', morphemes: [{ surface: '느끼', pos: 'VV' }, { surface: '지', pos: 'EC' }, { surface: 'ㄹ', pos: 'JX' }] },
+      { surface: '못한다.', morphemes: [{ surface: '못하', pos: 'VX' }, { surface: 'ㄴ다', pos: 'EF' }, { surface: '.', pos: 'SF' }] },
+    ];
+    const dict = new InMemoryDictionaryRepository([
+      [['표현', 'NN'], { lemma: '표현', pos: 'NN', definitions: ['expression'] }],
+      [['못', 'MAG'], { lemma: '못', pos: 'MAG', definitions: ['not'] }],
+      [['하다', 'VV'], { lemma: '하다', pos: 'VV', definitions: ['to do'] }],
+      [['못하다', 'VV'], { lemma: '못하다', pos: 'VV', definitions: ['to be unable to do'] }],
+      [['기보', 'NN'], { lemma: '기보', pos: 'NN', definitions: ['bad analyzer noun'] }],
+      [['단', 'NN'], { lemma: '단', pos: 'NN', definitions: ['bad analyzer noun'] }],
+    ]);
+    const negationPipeline = new ReadingPipeline(
+      new FakeMorphologicalAnalyzer(new Map([[sentence, analysis]])),
+      dict,
+      knowledge,
+    );
+    const { sentences } = await negationPipeline.analyze(sentence);
+    const target = sentences[0]!.eojeols[1]!;
+    const targetVocabulary = vocabularyMorphemes(target);
+
+    expect(targetVocabulary.map(m => [m.surface, m.lemma, m.pos])).toEqual([
+      ['하', '못하다', 'VV'],
+    ]);
+    expect(targetVocabulary[0]!.definitions).toEqual(['to be unable to do']);
+  });
+
   it('resolves epenthetic 으 stems to the dictionary lemma', async () => {
     const flySentence = '햇빛이 날아든다.';
     const flyAnalysis: EojeolMorphemes[] = [

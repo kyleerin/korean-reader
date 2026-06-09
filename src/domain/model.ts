@@ -104,7 +104,14 @@ export function isAnalyzerArtifactMorpheme(
   eojeolSurface: string,
   morpheme: { surface: string; pos: PartOfSpeech },
 ): boolean {
-  const bare = eojeolSurface.replace(/[.!?…]+$/u, '');
+  const bare = eojeolSurface.replace(/[.!?。！？…,，]+$/u, '');
+  // 못한다기보단 → 못 + 하 + ㄴ다 + 기보 + 단; only 못하다 is vocabulary.
+  if (bare.startsWith('못하') && morpheme.surface === '못' && morpheme.pos === 'MAG') {
+    return true;
+  }
+  if (bare.endsWith('기보단') && (morpheme.pos === 'NN' || morpheme.pos === 'NNP')) {
+    return morpheme.surface === '기보' || morpheme.surface === '단';
+  }
   // 들이민다 → 들 + 이민(immigration); only the verb is vocabulary.
   if (morpheme.surface === '이민' && morpheme.pos === 'NN' && /^들이민|^들이밀/.test(bare)) {
     return true;
