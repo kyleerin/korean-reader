@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AnalyzedEojeol, AnalyzedMorpheme, AnalyzedText, KnowledgeState, PartOfSpeech } from '../../src/domain/model';
-import { hasNewWords, isBoundAuxiliary, newVocabularyMorphemes, vocabularyMorphemes } from '../../src/domain/model';
+import { hasNewWords, isBoundAuxiliary, isFullyKnown, newVocabularyMorphemes, vocabularyMorphemes } from '../../src/domain/model';
 
 function eojeol(surface: string, morphemes: AnalyzedEojeol['morphemes']): AnalyzedEojeol {
   return { surface, morphemes };
@@ -96,5 +96,20 @@ describe('newVocabularyMorphemes', () => {
     ]));
 
     expect(result).toEqual([]);
+  });
+});
+
+describe('eojeol knowledge state helpers', () => {
+  it('can use live knowledge state instead of stale analyzed state', () => {
+    const eo = eojeol('한국어를', [
+      content('한국어', '한국어', 'NN', 'NEW'),
+      { surface: '를', lemma: '를', pos: 'JKO', type: 'PARTICLE', definitions: [], state: 'NEW', eojeolContext: [] },
+    ]);
+    const liveState = (morpheme: AnalyzedMorpheme) =>
+      morpheme.lemma === '한국어' && morpheme.pos === 'NN' ? 'KNOWN' : morpheme.state;
+
+    expect(hasNewWords(eo)).toBe(true);
+    expect(hasNewWords(eo, liveState)).toBe(false);
+    expect(isFullyKnown(eo, liveState)).toBe(true);
   });
 });
