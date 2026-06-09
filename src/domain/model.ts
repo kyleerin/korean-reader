@@ -135,6 +135,26 @@ export function isFullyKnown(eojeol: AnalyzedEojeol): boolean {
   return vocab.length === 0 || vocab.every(m => m.state === 'KNOWN' || m.state === 'IGNORED');
 }
 
+export function uniqueVocabularyMorphemes(text: AnalyzedText): AnalyzedMorpheme[] {
+  const seen = new Set<string>();
+  const result: AnalyzedMorpheme[] = [];
+  for (const sentence of text.sentences) {
+    for (const eojeol of sentence.eojeols) {
+      for (const morpheme of vocabularyMorphemes(eojeol)) {
+        const key = `${morpheme.lemma}\x00${morpheme.pos}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        result.push(morpheme);
+      }
+    }
+  }
+  return result;
+}
+
+export function newVocabularyMorphemes(text: AnalyzedText): AnalyzedMorpheme[] {
+  return uniqueVocabularyMorphemes(text).filter(morpheme => morpheme.state === 'NEW');
+}
+
 export function totalEojeols(text: AnalyzedText): number {
   return text.sentences.reduce((sum, s) => sum + s.eojeols.length, 0);
 }

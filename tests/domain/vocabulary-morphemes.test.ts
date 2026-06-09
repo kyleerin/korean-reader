@@ -1,9 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import type { AnalyzedEojeol } from '../../src/domain/model';
-import { hasNewWords, isBoundAuxiliary, vocabularyMorphemes } from '../../src/domain/model';
+import type { AnalyzedEojeol, AnalyzedMorpheme, AnalyzedText, KnowledgeState, PartOfSpeech } from '../../src/domain/model';
+import { hasNewWords, isBoundAuxiliary, newVocabularyMorphemes, vocabularyMorphemes } from '../../src/domain/model';
 
 function eojeol(surface: string, morphemes: AnalyzedEojeol['morphemes']): AnalyzedEojeol {
   return { surface, morphemes };
+}
+
+function content(surface: string, lemma: string, pos: PartOfSpeech, state: KnowledgeState): AnalyzedMorpheme {
+  return { surface, lemma, pos, type: 'CONTENT', definitions: [], state, eojeolContext: [] };
+}
+
+function text(eojeols: AnalyzedEojeol[]): AnalyzedText {
+  const sentence = { surface: eojeols.map(e => e.surface).join(' '), eojeols };
+  return { paragraphs: [{ sentences: [sentence] }], sentences: [sentence] };
 }
 
 describe('isBoundAuxiliary', () => {
@@ -48,5 +57,44 @@ describe('vocabularyMorphemes', () => {
     ]);
     expect(vocabularyMorphemes(eo).map(m => m.lemma)).toEqual(['어디']);
     expect(hasNewWords(eo)).toBe(false);
+  });
+});
+
+describe('newVocabularyMorphemes', () => {
+  it('returns unique NEW vocabulary from the text', () => {
+    const result = newVocabularyMorphemes(text([
+      eojeol('나는', [
+        content('나', '나', 'NP', 'NEW'),
+        { surface: '는', lemma: '는', pos: 'JX', type: 'PARTICLE', definitions: [], state: 'NEW', eojeolContext: [] },
+      ]),
+      eojeol('나도', [
+        content('나', '나', 'NP', 'NEW'),
+        { surface: '도', lemma: '도', pos: 'JX', type: 'PARTICLE', definitions: [], state: 'NEW', eojeolContext: [] },
+      ]),
+      eojeol('먹어요', [
+        content('먹', '먹다', 'VV', 'NEW'),
+        { surface: '어요', lemma: '어요', pos: 'EF', type: 'ENDING', definitions: [], state: 'NEW', eojeolContext: [] },
+      ]),
+    ]));
+
+    expect(result.map(m => [m.lemma, m.pos])).toEqual([
+      ['나', 'NP'],
+      ['먹다', 'VV'],
+    ]);
+  });
+
+  it('excludes vocabulary that is not blue/new', () => {
+    const result = newVocabularyMorphemes(text([
+      eojeol('밥을', [
+        content('밥', '밥', 'NN', 'KNOWN'),
+        { surface: '을', lemma: '을', pos: 'JKO', type: 'PARTICLE', definitions: [], state: 'NEW', eojeolContext: [] },
+      ]),
+      eojeol('공부합니다', [
+        content('공부', '공부', 'NN', 'LEARNING'),
+        content('하', '하다', 'VV', 'IGNORED'),
+      ]),
+    ]));
+
+    expect(result).toEqual([]);
   });
 });

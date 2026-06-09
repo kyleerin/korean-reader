@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObjec
 import type { AnalyzedEojeol, AnalyzedMorpheme, AnalyzedSentence, AnalyzedText, KnowledgeState } from '../domain/model';
 import type { KnowledgeRepository } from '../knowledge/repository';
 import type { ReviewRepository } from '../review/repository';
-import { hasNewWords, isFullyKnown, vocabularyMorphemes } from '../domain/model';
+import { hasNewWords, isFullyKnown, uniqueVocabularyMorphemes, vocabularyMorphemes } from '../domain/model';
 import { hasActiveTextSelection, useReadingTextSelection } from '../hooks/useReadingTextSelection';
 import { useLongPress } from '../hooks/useLongPress';
 import { useDeepLSettings, DeepLSettingsButton } from '../translation/DeepLSettings';
@@ -222,6 +222,7 @@ export function Reader({ text, sourceText, knowledge, reviewRepo, onBack }: Prop
   const [selected, setSelected] = useState<{ morpheme: AnalyzedMorpheme; state: KnowledgeState } | null>(null);
   const [textSelection, setTextSelection] = useState<TextSelection | null>(null);
   const [showTranslation, setShowTranslation] = useState(false);
+  const [isFinishing, setIsFinishing] = useState(false);
   const { apiKey, hasApiKey } = useDeepLSettings();
   const readingRef = useRef<HTMLDivElement>(null);
 
@@ -253,6 +254,27 @@ export function Reader({ text, sourceText, knowledge, reviewRepo, onBack }: Prop
     setSelected(prev => prev ? { ...prev, state: newState } : null);
   }
 
+  async function handleDone() {
+    if (isFinishing) return;
+    setIsFinishing(true);
+
+    try {
+      const currentNewWords = (await Promise.all(uniqueVocabularyMorphemes(text).map(async (morpheme) => {
+        const state = await knowledge.getState(morpheme.lemma, morpheme.pos);
+        return state === 'NEW' ? morpheme : null;
+      }))).filter((morpheme): morpheme is AnalyzedMorpheme => morpheme !== null);
+
+      await Promise.all(currentNewWords.map(async (morpheme) => {
+        await knowledge.setState(morpheme.lemma, morpheme.pos, 'KNOWN');
+        await reviewRepo.deleteCard(morpheme.lemma, morpheme.pos);
+      }));
+      onBack();
+    } catch (err) {
+      console.error('Failed to mark new words as known:', err);
+      setIsFinishing(false);
+    }
+  }
+
   const allEojeols = text.sentences.flatMap(s => s.eojeols);
   const newCount = allEojeols.filter(hasNewWords).length;
   const knownCount = allEojeols.filter(isFullyKnown).length;
@@ -265,6 +287,13 @@ export function Reader({ text, sourceText, knowledge, reviewRepo, onBack }: Prop
           style={{ background: 'transparent', color: 'var(--color-text-muted)', padding: '0.25rem 0.5rem' }}
         >
           ← Back
+        </button>
+        <button
+          onClick={handleDone}
+          disabled={isFinishing}
+          style={{ background: 'var(--color-new)', color: '#fff', padding: '0.35rem 0.75rem' }}
+        >
+          {isFinishing ? 'Saving…' : 'Done'}
         </button>
         <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
           {newCount} new · {knownCount} known eojeols
