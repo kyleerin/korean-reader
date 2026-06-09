@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import type { AnalyzedEojeol, AnalyzedMorpheme, AnalyzedSentence, AnalyzedText, KnowledgeState } from '../domain/model';
 import type { KnowledgeRepository } from '../knowledge/repository';
 import type { ReviewRepository } from '../review/repository';
-import { hasNewWords, isFullyKnown, vocabularyMorphemes } from '../domain/model';
+import { hasNewWords, isFullyKnown, uniqueVocabularyMorphemes, vocabularyMorphemes } from '../domain/model';
 import { hasActiveTextSelection, useReadingTextSelection } from '../hooks/useReadingTextSelection';
 import { useLongPress } from '../hooks/useLongPress';
 import { useDeepLSettings, DeepLSettingsButton } from '../translation/DeepLSettings';
@@ -26,6 +26,10 @@ const STATE_COLOR: Record<KnowledgeState, string | undefined> = {
   IGNORED:  'var(--color-ignored)',
 };
 
+function morphemeKey(morpheme: AnalyzedMorpheme): string {
+  return `${morpheme.lemma}\x00${morpheme.pos}`;
+}
+
 function hasBarejamo(s: string): boolean {
   return /[ㄱ-ㅣᄀ-ᇿ]/.test(s);
 }
@@ -37,22 +41,15 @@ function needsFallback(eojeol: AnalyzedEojeol): boolean {
 
 function ContentSpan({
   morpheme,
-  knowledge,
+  state,
   readingRef,
   onTap,
 }: {
   morpheme: AnalyzedMorpheme;
-  knowledge: KnowledgeRepository;
+  state: KnowledgeState;
   readingRef: RefObject<HTMLElement | null>;
   onTap: (m: AnalyzedMorpheme, s: KnowledgeState) => void;
 }) {
-  const [state, setState] = useState<KnowledgeState>(morpheme.state);
-
-  useEffect(() => {
-    setState(morpheme.state);
-    return knowledge.observeState(morpheme.lemma, morpheme.pos, setState);
-  }, [morpheme.lemma, morpheme.pos, morpheme.state, knowledge]);
-
   return (
     <span
       onClick={() => {
@@ -68,12 +65,12 @@ function ContentSpan({
 
 function StandardEojeol({
   eojeol,
-  knowledge,
+  stateFor,
   readingRef,
   onTap,
 }: {
   eojeol: AnalyzedEojeol;
-  knowledge: KnowledgeRepository;
+  stateFor: (morpheme: AnalyzedMorpheme) => KnowledgeState;
   readingRef: RefObject<HTMLElement | null>;
   onTap: (m: AnalyzedMorpheme, s: KnowledgeState) => void;
 }) {
@@ -81,7 +78,7 @@ function StandardEojeol({
     <>
       {eojeol.morphemes.map((m, i) => {
         if (m.type === 'CONTENT') {
-          return <ContentSpan key={i} morpheme={m} knowledge={knowledge} readingRef={readingRef} onTap={onTap} />;
+          return <ContentSpan key={i} morpheme={m} state={stateFor(m)} readingRef={readingRef} onTap={onTap} />;
         }
         if (m.type === 'PUNCTUATION' || m.type === 'FOREIGN' || m.type === 'UNKNOWN') {
           return <span key={i}>{m.surface}</span>;
@@ -112,33 +109,17 @@ function fallbackSegments(eojeol: AnalyzedEojeol, headColor: string | undefined)
 
 function FallbackEojeol({
   eojeol,
-  knowledge,
+  stateFor,
   readingRef,
   onTap,
 }: {
   eojeol: AnalyzedEojeol;
-  knowledge: KnowledgeRepository;
+  stateFor: (morpheme: AnalyzedMorpheme) => KnowledgeState;
   readingRef: RefObject<HTMLElement | null>;
   onTap: (m: AnalyzedMorpheme, s: KnowledgeState) => void;
 }) {
   const vocabMorphemes = vocabularyMorphemes(eojeol);
-
-  const [statesMap, setStatesMap] = useState<Map<string, KnowledgeState>>(
-    () => new Map(vocabMorphemes.map(m => [`${m.lemma}\x00${m.pos}`, m.state])),
-  );
-
-  useEffect(() => {
-    setStatesMap(new Map(vocabMorphemes.map(m => [`${m.lemma}\x00${m.pos}`, m.state])));
-    const unsubs = vocabMorphemes.map(m =>
-      knowledge.observeState(m.lemma, m.pos, s =>
-        setStatesMap(prev => new Map(prev).set(`${m.lemma}\x00${m.pos}`, s)),
-      ),
-    );
-    return () => unsubs.forEach(u => u());
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [eojeol, knowledge]);
-
-  const states = [...statesMap.values()];
+  const states = vocabMorphemes.map(stateFor);
   let color: string | undefined;
   if (states.includes('NEW'))           color = STATE_COLOR.NEW;
   else if (states.includes('LEARNING')) color = STATE_COLOR.LEARNING;
@@ -151,8 +132,7 @@ function FallbackEojeol({
   function handleClick() {
     if (hasActiveTextSelection(readingRef.current)) return;
     const primary = vocabMorphemes[0]!;
-    const state = statesMap.get(`${primary.lemma}\x00${primary.pos}`) ?? primary.state;
-    onTap(primary, state);
+    onTap(primary, stateFor(primary));
   }
 
   const segments = fallbackSegments(eojeol, color);
@@ -192,13 +172,13 @@ function EojeolShell({
 
 function KoreanSentence({
   sentence,
-  knowledge,
+  stateFor,
   readingRef,
   onTap,
   onExplainEojeol,
 }: {
   sentence: AnalyzedSentence;
-  knowledge: KnowledgeRepository;
+  stateFor: (morpheme: AnalyzedMorpheme) => KnowledgeState;
   readingRef: RefObject<HTMLElement | null>;
   onTap: (m: AnalyzedMorpheme, s: KnowledgeState) => void;
   onExplainEojeol: (e: AnalyzedEojeol) => void;
@@ -208,8 +188,8 @@ function KoreanSentence({
       {sentence.eojeols.map((eojeol, ei) => (
         <EojeolShell key={ei} eojeol={eojeol} onExplain={onExplainEojeol}>
           {needsFallback(eojeol)
-            ? <FallbackEojeol eojeol={eojeol} knowledge={knowledge} readingRef={readingRef} onTap={onTap} />
-            : <StandardEojeol eojeol={eojeol} knowledge={knowledge} readingRef={readingRef} onTap={onTap} />
+            ? <FallbackEojeol eojeol={eojeol} stateFor={stateFor} readingRef={readingRef} onTap={onTap} />
+            : <StandardEojeol eojeol={eojeol} stateFor={stateFor} readingRef={readingRef} onTap={onTap} />
           }
           {ei < sentence.eojeols.length - 1 ? ' ' : ''}
         </EojeolShell>
@@ -222,8 +202,46 @@ export function Reader({ text, sourceText, knowledge, reviewRepo, onBack }: Prop
   const [selected, setSelected] = useState<{ morpheme: AnalyzedMorpheme; state: KnowledgeState } | null>(null);
   const [textSelection, setTextSelection] = useState<TextSelection | null>(null);
   const [showTranslation, setShowTranslation] = useState(false);
+  const [isFinishing, setIsFinishing] = useState(false);
   const { apiKey, hasApiKey } = useDeepLSettings();
   const readingRef = useRef<HTMLDivElement>(null);
+  const vocabulary = useMemo(() => uniqueVocabularyMorphemes(text), [text]);
+  const [knowledgeStates, setKnowledgeStates] = useState<Map<string, KnowledgeState>>(
+    () => new Map(vocabulary.map(m => [morphemeKey(m), m.state])),
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    setKnowledgeStates(new Map(vocabulary.map(m => [morphemeKey(m), m.state])));
+
+    Promise.all(vocabulary.map(async (morpheme) => {
+      const state = await knowledge.getState(morpheme.lemma, morpheme.pos);
+      return [morphemeKey(morpheme), state] as const;
+    })).then((entries) => {
+      if (cancelled) return;
+      setKnowledgeStates(prev => {
+        const next = new Map(prev);
+        entries.forEach(([key, state]) => next.set(key, state));
+        return next;
+      });
+    });
+
+    const unsubs = vocabulary.map(morpheme =>
+      knowledge.observeState(morpheme.lemma, morpheme.pos, state =>
+        setKnowledgeStates(prev => new Map(prev).set(morphemeKey(morpheme), state)),
+      ),
+    );
+
+    return () => {
+      cancelled = true;
+      unsubs.forEach(unsub => unsub());
+    };
+  }, [knowledge, vocabulary]);
+
+  const stateFor = useCallback(
+    (morpheme: AnalyzedMorpheme) => knowledgeStates.get(morphemeKey(morpheme)) ?? morpheme.state,
+    [knowledgeStates],
+  );
 
   const handleExplainEojeol = useCallback((eojeol: AnalyzedEojeol) => {
     const resolved = resolveTextSelection(text, eojeol.surface);
@@ -253,9 +271,27 @@ export function Reader({ text, sourceText, knowledge, reviewRepo, onBack }: Prop
     setSelected(prev => prev ? { ...prev, state: newState } : null);
   }
 
+  async function handleDone() {
+    if (isFinishing) return;
+    setIsFinishing(true);
+
+    try {
+      const currentNewWords = vocabulary.filter(morpheme => stateFor(morpheme) === 'NEW');
+
+      await Promise.all(currentNewWords.map(async (morpheme) => {
+        await knowledge.setState(morpheme.lemma, morpheme.pos, 'KNOWN');
+        await reviewRepo.deleteCard(morpheme.lemma, morpheme.pos);
+      }));
+      onBack();
+    } catch (err) {
+      console.error('Failed to mark new words as known:', err);
+      setIsFinishing(false);
+    }
+  }
+
   const allEojeols = text.sentences.flatMap(s => s.eojeols);
-  const newCount = allEojeols.filter(hasNewWords).length;
-  const knownCount = allEojeols.filter(isFullyKnown).length;
+  const newCount = allEojeols.filter(eojeol => hasNewWords(eojeol, stateFor)).length;
+  const knownCount = allEojeols.filter(eojeol => isFullyKnown(eojeol, stateFor)).length;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', paddingBottom: textSelection || selected ? '14rem' : '8rem' }}>
@@ -265,6 +301,13 @@ export function Reader({ text, sourceText, knowledge, reviewRepo, onBack }: Prop
           style={{ background: 'transparent', color: 'var(--color-text-muted)', padding: '0.25rem 0.5rem' }}
         >
           ← Back
+        </button>
+        <button
+          onClick={handleDone}
+          disabled={isFinishing}
+          style={{ background: 'var(--color-new)', color: '#fff', padding: '0.35rem 0.75rem' }}
+        >
+          {isFinishing ? 'Saving…' : 'Done'}
         </button>
         <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
           {newCount} new · {knownCount} known eojeols
@@ -286,7 +329,7 @@ export function Reader({ text, sourceText, knowledge, reviewRepo, onBack }: Prop
               <span key={si}>
                 <KoreanSentence
                   sentence={sentence}
-                  knowledge={knowledge}
+                  stateFor={stateFor}
                   readingRef={readingRef}
                   onExplainEojeol={handleExplainEojeol}
                   onTap={(m, s) => {

@@ -119,6 +119,29 @@ describe('ReadingPipeline', () => {
     expect(see.definitions).toEqual(['to see; to try doing']);
   });
 
+  it('uses NN dictionary entries and knowledge state for analyzer NNP nouns', async () => {
+    const sentence = '한국어를 공부합니다.';
+    const analysis: EojeolMorphemes[] = [
+      { surface: '한국어를', morphemes: [{ surface: '한국어', pos: 'NNP' }, { surface: '를', pos: 'JKO' }] },
+      { surface: '공부합니다.', morphemes: [{ surface: '공부', pos: 'NN' }, { surface: '하', pos: 'XSV' }, { surface: 'ㅂ니다', pos: 'EF' }, { surface: '.', pos: 'SF' }] },
+    ];
+    const dict = new InMemoryDictionaryRepository([
+      [['한국어', 'NN'], { lemma: '한국어', pos: 'NN', definitions: ['The language used by the Korean people.'] }],
+    ]);
+    await knowledge.setState('한국어', 'NN', 'KNOWN');
+    const koreanPipeline = new ReadingPipeline(
+      new FakeMorphologicalAnalyzer(new Map([[sentence, analysis]])),
+      dict,
+      knowledge,
+    );
+    const { sentences } = await koreanPipeline.analyze(sentence);
+    const korean = contentMorphemes(sentences[0]!.eojeols[0]!)[0]!;
+    expect(korean.lemma).toBe('한국어');
+    expect(korean.pos).toBe('NN');
+    expect(korean.state).toBe('KNOWN');
+    expect(korean.definitions).toEqual(['The language used by the Korean people.']);
+  });
+
   it('resolves 들이민다 to 들이밀다 when the analyzer mis-splits the compound verb', async () => {
     const sentence = '코를 들이민다.';
     const analysis: EojeolMorphemes[] = [

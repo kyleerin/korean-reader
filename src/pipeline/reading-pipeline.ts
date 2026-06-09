@@ -57,6 +57,7 @@ export class ReadingPipeline {
         ...lemmaCandidates(morpheme.surface, morpheme.pos),
       ].filter((lemma, index, all) => all.indexOf(lemma) === index);
       let lemma = candidates[0]!;
+      let analyzedPos = morpheme.pos;
       let definitions: readonly string[] = [];
       let examples: readonly string[] = [];
 
@@ -67,11 +68,14 @@ export class ReadingPipeline {
           ? (['NR', morpheme.pos] as const)
           : dictionaryPosLookupOrder(morpheme.pos);
 
-        for (const pos of posOrder) {
+        for (const lookupPos of posOrder) {
           const posEntries = (await this.dictionary.lookupAll(candidate))
-            .filter(e => e.pos === pos);
+            .filter(e => e.pos === lookupPos);
           if (posEntries.length > 0) {
             lemma = candidate === nrLemma ? morpheme.surface : candidate;
+            if (morpheme.pos === 'NNP' && lookupPos === 'NN') {
+              analyzedPos = 'NN';
+            }
             definitions = posEntries.flatMap(e => e.definitions);
             examples = posEntries.flatMap(e => e.examples ?? []);
             break lookup;
@@ -79,11 +83,11 @@ export class ReadingPipeline {
         }
       }
 
-      const state = await this.knowledge.getState(lemma, morpheme.pos);
+      const state = await this.knowledge.getState(lemma, analyzedPos);
       return {
         surface: morpheme.surface,
         lemma,
-        pos: morpheme.pos,
+        pos: analyzedPos,
         type,
         definitions,
         examples: examples.length > 0 ? examples : undefined,

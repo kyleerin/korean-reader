@@ -126,13 +126,44 @@ export function vocabularyMorphemes(eojeol: AnalyzedEojeol): AnalyzedMorpheme[] 
   );
 }
 
-export function hasNewWords(eojeol: AnalyzedEojeol): boolean {
-  return vocabularyMorphemes(eojeol).some(m => m.state === 'NEW');
+type MorphemeStateResolver = (morpheme: AnalyzedMorpheme) => KnowledgeState;
+
+export function hasNewWords(
+  eojeol: AnalyzedEojeol,
+  stateFor: MorphemeStateResolver = morpheme => morpheme.state,
+): boolean {
+  return vocabularyMorphemes(eojeol).some(m => stateFor(m) === 'NEW');
 }
 
-export function isFullyKnown(eojeol: AnalyzedEojeol): boolean {
+export function isFullyKnown(
+  eojeol: AnalyzedEojeol,
+  stateFor: MorphemeStateResolver = morpheme => morpheme.state,
+): boolean {
   const vocab = vocabularyMorphemes(eojeol);
-  return vocab.length === 0 || vocab.every(m => m.state === 'KNOWN' || m.state === 'IGNORED');
+  return vocab.length === 0 || vocab.every(m => {
+    const state = stateFor(m);
+    return state === 'KNOWN' || state === 'IGNORED';
+  });
+}
+
+export function uniqueVocabularyMorphemes(text: AnalyzedText): AnalyzedMorpheme[] {
+  const seen = new Set<string>();
+  const result: AnalyzedMorpheme[] = [];
+  for (const sentence of text.sentences) {
+    for (const eojeol of sentence.eojeols) {
+      for (const morpheme of vocabularyMorphemes(eojeol)) {
+        const key = `${morpheme.lemma}\x00${morpheme.pos}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        result.push(morpheme);
+      }
+    }
+  }
+  return result;
+}
+
+export function newVocabularyMorphemes(text: AnalyzedText): AnalyzedMorpheme[] {
+  return uniqueVocabularyMorphemes(text).filter(morpheme => morpheme.state === 'NEW');
 }
 
 export function totalEojeols(text: AnalyzedText): number {
