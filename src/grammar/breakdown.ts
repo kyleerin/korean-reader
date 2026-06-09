@@ -43,6 +43,13 @@ export function buildMorphemeBreakdown(morpheme: AnalyzedMorpheme): BreakdownIte
   if (morpheme.eojeolContext.some(m => m.surface === '이민' && m.pos === 'NN')) {
     return null;
   }
+  if (
+    morpheme.eojeolContext.some(m => m.surface === '못' && m.pos === 'MAG')
+    && morpheme.eojeolContext.some(m => m.surface === '기보' && m.pos === 'NN')
+    && morpheme.eojeolContext.some(m => m.surface === '단' && m.pos === 'NN')
+  ) {
+    return null;
+  }
 
   if (morpheme.eojeolContext.length === 0) return null;
   const items: BreakdownItem[] = [];

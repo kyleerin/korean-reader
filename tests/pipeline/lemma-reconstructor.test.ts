@@ -78,6 +78,19 @@ describe('surfaceLemmaCandidates', () => {
     expect(surfaceLemmaCandidates('들이민다.', '들', 'VV', context)).toEqual(['들이밀다']);
   });
 
+  it('recovers 못하다 from 못한다기보단 when the analyzer splits 못 and 하', () => {
+    const negationContext = [
+      { surface: '못', pos: 'MAG' as const },
+      { surface: '하', pos: 'VV' as const },
+      { surface: 'ㄴ다', pos: 'EF' as const },
+      { surface: '기보', pos: 'NN' as const },
+      { surface: '단', pos: 'NN' as const },
+      { surface: ',', pos: 'SP' as const },
+    ];
+
+    expect(surfaceLemmaCandidates('못한다기보단,', '하', 'VV', negationContext)).toEqual(['못하다']);
+  });
+
   it('ignores non-head predicates in the eojeol', () => {
     expect(surfaceLemmaCandidates('들이민다.', '이', 'VCP', context)).toEqual([]);
   });
