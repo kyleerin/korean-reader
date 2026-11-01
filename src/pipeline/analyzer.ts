@@ -8,9 +8,8 @@ export interface EojeolMorphemes {
 /**
  * Platform-provided morphological analyzer.
  *
- * The production implementation will be backed by mecab-ko compiled to
- * WebAssembly (Emscripten). A FakeMorphologicalAnalyzer is available in
- * tests/ for unit testing without the WASM module.
+ * Production uses garu-ko WASM (`GaruKoAnalyzer`). A stub/fake analyzer is
+ * available in tests/ for unit testing without the WASM module.
  *
  * Receives a single sentence (not a whole document) and returns morphemes
  * grouped by eojeol, preserving the original whitespace structure.
