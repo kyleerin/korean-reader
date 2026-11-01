@@ -3,11 +3,13 @@ export type SqlParam = string | number | null;
 export type Row = Record<string, SqlParam>;
 
 /**
- * Minimal synchronous-style database interface shared by the SQLite WASM
- * production client (SqliteWasmDbClient) and the in-memory test fake.
+ * EXPERIMENTAL — not used by the production App.
+ * Production persistence is localStorage (knowledge + review) and in-memory
+ * ndjson for the dictionary. This interface backs the unused SQLite/OPFS path
+ * kept for a future text-history / token_cache migration.
  *
- * All repository code is written against this interface so it can run in
- * both the browser and Node.js test environments.
+ * Minimal synchronous-style database interface shared by the SQLite WASM
+ * client (SqliteWasmDbClient) and the in-memory test fake.
  */
 export interface DbClient {
   /** Execute one or more statements with no return value (DDL, INSERT, UPDATE, DELETE). */

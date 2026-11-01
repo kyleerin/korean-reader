@@ -13,8 +13,8 @@ import { segmentParagraphs } from './tokenizer';
  *   raw text → sentence segmentation → morphological analysis → lemma lookup
  *   → dictionary enrichment → knowledge-state annotation → AnalyzedText
  *
- * Call analyze() once per page/screen; cache the result in the local DB via
- * token_cache so re-opening a text is instant.
+ * Today the whole pasted document is analyzed up front (no token_cache yet).
+ * OPFS-backed caching remains an experimental follow-up in `src/db/`.
  */
 export class ReadingPipeline {
   constructor(

@@ -74,12 +74,13 @@ The bundled dictionary is sourced from the [NIKL Korean-English dictionary](http
 src/
   analyzer/       garu-ko WASM adapter
   components/     React UI (ImportScreen, Reader, ReviewScreen, TapPanel)
-  db/             SQLite WASM client + schema (for future OPFS persistence)
-  dictionary/     DictionaryRepository — ndjson loader and SQLite repo
+  db/             EXPERIMENTAL SQLite WASM + schema (unused by App; future OPFS)
+  dictionary/     DictionaryRepository — ndjson loader (+ experimental SQLite repo)
   domain/         Core types (KnowledgeState, PartOfSpeech, AnalyzedText, …)
   knowledge/      KnowledgeRepository — localStorage-backed word state
-  pipeline/       ReadingPipeline — tokenizer, lemma reconstructor, classifier
+  pipeline/       ReadingPipeline — tokenizer, lemma reconstructor, analyzer quirks
   review/         ReviewRepository — FSRS card storage (localStorage)
+  server/         DeepL translate proxy (+ body/rate/origin guards)
 scripts/
   build-dictionary.ts   Downloads and converts the NIKL parquet file
 tests/
@@ -100,11 +101,20 @@ tests/
 | Persistence | localStorage (word states + review cards) |
 | Tests | Vitest |
 
+## Translation API
+
+`POST /api/translate` forwards `{ text, apiKey }` to DeepL. Protections:
+
+- Max JSON body **64 KB**; text capped at **12 000** characters
+- Per-client sliding-window rate limit (**30**/minute, best-effort per process)
+- Optional origin allowlist via `TRANSLATE_ALLOWED_ORIGINS` (comma-separated). **Unset = unrestricted** (convenient for local dev). Set this on deployed hosts, e.g. `https://your-app.vercel.app`.
+
+Request bodies may contain the user’s DeepL key — handlers must not log them.
+
 ## Roadmap
 
 - [ ] Plain-text file import (`.txt`)
-- [ ] Conjugation / particle explainer in tap panel
-- [ ] OPFS-backed SQLite for text history and token cache
+- [ ] OPFS-backed SQLite for text history and token cache (scaffold in `src/db/`)
 - [ ] PWA manifest + Service Worker (installable, offline)
 - [ ] Text-to-speech (Web Speech API, `ko-KR`)
 - [ ] EPUB import

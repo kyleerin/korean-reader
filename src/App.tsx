@@ -13,11 +13,19 @@ import { ImportScreen } from './components/ImportScreen';
 import { Reader } from './components/Reader';
 import { ReviewScreen } from './components/ReviewScreen';
 
+type HomeDeps = {
+  dict: DictionaryRepository;
+  analyzer: MorphologicalAnalyzer;
+  knowledge: KnowledgeRepository;
+  reviewRepo: ReviewRepository;
+  dictWarning?: string;
+};
+
 type AppState =
   | { phase: 'loading'; message: string }
-  | { phase: 'home'; dict: DictionaryRepository; analyzer: MorphologicalAnalyzer; knowledge: KnowledgeRepository; reviewRepo: ReviewRepository }
+  | ({ phase: 'home' } & HomeDeps)
   | { phase: 'analyzing' }
-  | { phase: 'reading'; text: AnalyzedText; sourceText: string; dict: DictionaryRepository; analyzer: MorphologicalAnalyzer; knowledge: KnowledgeRepository; reviewRepo: ReviewRepository }
+  | ({ phase: 'reading'; text: AnalyzedText; sourceText: string } & HomeDeps)
   | { phase: 'review'; knowledge: KnowledgeRepository; reviewRepo: ReviewRepository }
   | { phase: 'error'; message: string };
 
@@ -35,13 +43,22 @@ export function App() {
     const knowledge = new LocalStorageKnowledgeRepository();
     const reviewRepo = new LocalStorageReviewRepository();
 
+    let dictWarning: string | undefined;
     const loadDict = NdjsonDictionaryRepository.load().catch((err: unknown) => {
       console.warn('Dictionary load failed:', err instanceof Error ? err.message : err);
+      dictWarning = 'Dictionary failed to load — definitions will be unavailable until you reload.';
       return FALLBACK_DICT;
     });
 
     Promise.all([loadDict, GaruKoAnalyzer.load()]).then(([dict, analyzer]) => {
-      const s: Extract<AppState, { phase: 'home' }> = { phase: 'home', dict, analyzer, knowledge, reviewRepo };
+      const s: Extract<AppState, { phase: 'home' }> = {
+        phase: 'home',
+        dict,
+        analyzer,
+        knowledge,
+        reviewRepo,
+        dictWarning,
+      };
       homeRef.current = s;
       setState(s);
       reviewRepo.countDue(new Date()).then(setDueCount);
@@ -59,11 +76,20 @@ export function App() {
 
   async function handleImport(rawText: string) {
     if (state.phase !== 'home') return;
-    const { dict, analyzer, knowledge, reviewRepo } = state;
+    const { dict, analyzer, knowledge, reviewRepo, dictWarning } = state;
     setState({ phase: 'analyzing' });
     try {
       const analyzed = await new ReadingPipeline(analyzer, dict, knowledge).analyze(rawText);
-      setState({ phase: 'reading', text: analyzed, sourceText: rawText, dict, analyzer, knowledge, reviewRepo });
+      setState({
+        phase: 'reading',
+        text: analyzed,
+        sourceText: rawText,
+        dict,
+        analyzer,
+        knowledge,
+        reviewRepo,
+        dictWarning,
+      });
     } catch (err) {
       setState({ phase: 'error', message: err instanceof Error ? err.message : String(err) });
     }
@@ -96,7 +122,15 @@ export function App() {
   }
 
   if (state.phase === 'home') {
-    return <ImportScreen knowledge={state.knowledge} onImport={handleImport} dueCount={dueCount} onReview={handleGoReview} />;
+    return (
+      <ImportScreen
+        knowledge={state.knowledge}
+        onImport={handleImport}
+        dueCount={dueCount}
+        onReview={handleGoReview}
+        dictWarning={state.dictWarning}
+      />
+    );
   }
 
   if (state.phase === 'review') {

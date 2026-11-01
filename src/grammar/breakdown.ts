@@ -1,5 +1,5 @@
 import type { AnalyzedEojeol, AnalyzedMorpheme } from '../domain/model';
-import { isAnalyzerArtifactMorpheme } from '../domain/model';
+import { contextHasAnalyzerArtifacts, isAnalyzerArtifactMorpheme } from '../pipeline/analyzer-quirks';
 import { morphemeLabel, posKind } from './labels';
 
 export interface BreakdownItem {
@@ -40,14 +40,7 @@ export function explainBreakdown(items: BreakdownItem[]): string {
 }
 
 export function buildMorphemeBreakdown(morpheme: AnalyzedMorpheme): BreakdownItem[] | null {
-  if (morpheme.eojeolContext.some(m => m.surface === '이민' && m.pos === 'NN')) {
-    return null;
-  }
-  if (
-    morpheme.eojeolContext.some(m => m.surface === '못' && m.pos === 'MAG')
-    && morpheme.eojeolContext.some(m => m.surface === '기보' && m.pos === 'NN')
-    && morpheme.eojeolContext.some(m => m.surface === '단' && m.pos === 'NN')
-  ) {
+  if (contextHasAnalyzerArtifacts(morpheme.eojeolContext)) {
     return null;
   }
 

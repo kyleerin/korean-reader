@@ -1,4 +1,8 @@
+import { isAnalyzerArtifactMorpheme } from '../pipeline/analyzer-quirks';
+
 export type KnowledgeState = 'NEW' | 'LEARNING' | 'KNOWN' | 'IGNORED';
+
+export { isAnalyzerArtifactMorpheme };
 
 export type PartOfSpeech =
   // Nouns
@@ -97,31 +101,6 @@ const BOUND_AUXILIARY_VX = new Set(['지', '되', '주', '시', '겠', '못', '�
 
 export function isBoundAuxiliary(m: { surface: string; pos: PartOfSpeech }): boolean {
   return m.pos === 'VX' && BOUND_AUXILIARY_VX.has(m.surface);
-}
-
-/** Nouns etc. that garu-ko invents inside mis-parsed compound verbs — not real vocabulary. */
-export function isAnalyzerArtifactMorpheme(
-  eojeolSurface: string,
-  morpheme: { surface: string; pos: PartOfSpeech },
-): boolean {
-  const bare = eojeolSurface.replace(/[.!?。！？…,，]+$/u, '');
-  // 못한다기보단 → 못 + 하 + ㄴ다 + 기보 + 단; only 못하다 is vocabulary.
-  if (/^못(?:하|한|해|했|할|함|합)/.test(bare) && morpheme.surface === '못' && morpheme.pos === 'MAG') {
-    return true;
-  }
-  if (bare.endsWith('기보단') && (morpheme.pos === 'NN' || morpheme.pos === 'NNP')) {
-    return morpheme.surface === '기보' || morpheme.surface === '단';
-  }
-  // 들이민다 → 들 + 이민(immigration); only the verb is vocabulary.
-  if (morpheme.surface === '이민' && morpheme.pos === 'NN' && /^들이민|^들이밀/.test(bare)) {
-    return true;
-  }
-  // 어딘가가 → 어디 + ㄴ + 가가; the fused suffix chunk is not a separate vocab item.
-  if ((morpheme.pos === 'NN' || morpheme.pos === 'NNP') && /^어딘가/.test(bare)) {
-    const suffix = bare.slice('어딘'.length);
-    return morpheme.surface.startsWith('가') && suffix.startsWith(morpheme.surface);
-  }
-  return false;
 }
 
 /** Content morphemes that represent trackable vocabulary (excludes bound auxiliaries). */

@@ -1,4 +1,5 @@
 import type { PartOfSpeech } from '../domain/model';
+import { surfaceCompoundLemmasFor } from './analyzer-quirks';
 
 /** Native-Korean numeral determiners (MM) whose count-noun form (NR) is in the dictionary. */
 const NATIVE_NUMERAL_NR_LEMMA: Readonly<Record<string, string>> = {
@@ -9,17 +10,6 @@ const PREDICATE_POS = new Set<PartOfSpeech>([
   'VV', 'VA', 'VX', 'VCP', 'VCN', 'XSV', 'XSA',
 ]);
 
-/** Eojeol-surface patterns where the analyzer often splits compound verbs incorrectly. */
-const SURFACE_COMPOUND_LEMMAS: { pattern: RegExp; lemma: string }[] = [
-  { pattern: /^들이밀/, lemma: '들이밀다' },
-  { pattern: /^들이민/, lemma: '들이밀다' },
-  { pattern: /^못(?:하|한|해|했|할|함|합)/, lemma: '못하다' },
-];
-
-function bareEojeol(surface: string): string {
-  return surface.replace(/[.!?。！？…,，]+$/u, '');
-}
-
 export function isHeadPredicate(surface: string, pos: PartOfSpeech, context: { surface: string; pos: PartOfSpeech }[]): boolean {
   if (!PREDICATE_POS.has(pos)) return false;
   const first = context.find(m => PREDICATE_POS.has(m.pos));
@@ -27,7 +17,7 @@ export function isHeadPredicate(surface: string, pos: PartOfSpeech, context: { s
 }
 
 /**
- * Recover dictionary lemmas from the full eojeol when MeCab/garu-ko splits compound
+ * Recover dictionary lemmas from the full eojeol when garu-ko splits compound
  * predicates wrongly (e.g. 들이민다 → 들 + 이민).
  */
 export function surfaceLemmaCandidates(
@@ -37,19 +27,13 @@ export function surfaceLemmaCandidates(
   context: { surface: string; pos: PartOfSpeech }[],
 ): string[] {
   if (!isHeadPredicate(morphemeSurface, pos, context)) return [];
-
-  const bare = bareEojeol(eojeolSurface);
-  const candidates: string[] = [];
-  for (const { pattern, lemma } of SURFACE_COMPOUND_LEMMAS) {
-    if (pattern.test(bare)) candidates.push(lemma);
-  }
-  return candidates;
+  return surfaceCompoundLemmasFor(eojeolSurface);
 }
 
 /**
  * Converts a morpheme surface form to its dictionary (lemma) form.
  *
- * MeCab-ko returns verb and adjective stems — we append "다" to produce the
+ * The analyzer returns verb and adjective stems — we append "다" to produce the
  * infinitive form used as the dictionary key.
  *
  * Nouns, adverbs, and other uninflected forms are returned unchanged because

@@ -8,9 +8,10 @@ interface Props {
   onImport: (text: string) => void;
   dueCount: number;
   onReview: () => void;
+  dictWarning?: string;
 }
 
-export function ImportScreen({ knowledge, onImport, dueCount, onReview }: Props) {
+export function ImportScreen({ knowledge, onImport, dueCount, onReview, dictWarning }: Props) {
   const [text, setText] = useState('');
 
   return (
@@ -27,6 +28,11 @@ export function ImportScreen({ knowledge, onImport, dueCount, onReview }: Props)
         )}
         <DeepLSettingsButton />
       </div>
+      {dictWarning && (
+        <p role="alert" style={{ color: '#b45309', background: '#fffbeb', border: '1px solid #fcd34d', padding: '0.6rem 0.8rem', borderRadius: '6px', margin: 0, fontSize: '0.9rem' }}>
+          {dictWarning}
+        </p>
+      )}
       <WordDownloads knowledge={knowledge} />
 
       <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>

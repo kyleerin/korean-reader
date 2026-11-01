@@ -19,7 +19,9 @@ Users enter their own DeepL API key in the UI (**Add DeepL key**); it is stored 
 - **Vercel:** `api/translate.ts` serverless function (`vercel.json` configures the Vite SPA build)
 - **Optional:** standalone Node proxy via `npm run dev:api`
 
-`public/dictionary.ndjson` is pre-committed (~17 MB); `npm run build:dict` is only needed if rebuilding the dictionary from Hugging Face.
+Proxy guards: 64 KB body cap, 30 req/min/client rate limit, optional `TRANSLATE_ALLOWED_ORIGINS` allowlist (comma-separated). Leave unset for local; set on deployed hosts. Do not log request bodies (they contain API keys).
+
+`public/dictionary.ndjson` is pre-committed (~17 MB); `npm run build:dict` is only needed if rebuilding the dictionary from Hugging Face. SQLite/OPFS under `src/db/` is experimental and unused by `App`.
 
 ### Standard commands
 
