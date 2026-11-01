@@ -1,6 +1,15 @@
 import type { KnowledgeState, PartOfSpeech } from '../domain/model';
 
+export interface KnowledgeWord {
+  readonly lemma: string;
+  readonly pos: PartOfSpeech;
+  readonly state: KnowledgeState;
+}
+
 export interface KnowledgeRepository {
+  /** Lists saved vocabulary, including encountered words still marked NEW. */
+  listWords(): Promise<KnowledgeWord[]>;
+
   /** Returns the current state, defaulting to NEW for unseen words. */
   getState(lemma: string, pos: PartOfSpeech): Promise<KnowledgeState>;
 

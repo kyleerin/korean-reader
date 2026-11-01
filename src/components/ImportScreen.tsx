@@ -1,13 +1,16 @@
 import { useState } from 'react';
 import { DeepLSettingsButton } from '../translation/DeepLSettings';
+import type { KnowledgeRepository } from '../knowledge/repository';
+import { WordDownloads } from './WordDownloads';
 
 interface Props {
+  knowledge: KnowledgeRepository;
   onImport: (text: string) => void;
   dueCount: number;
   onReview: () => void;
 }
 
-export function ImportScreen({ onImport, dueCount, onReview }: Props) {
+export function ImportScreen({ knowledge, onImport, dueCount, onReview }: Props) {
   const [text, setText] = useState('');
 
   return (
@@ -24,6 +27,7 @@ export function ImportScreen({ onImport, dueCount, onReview }: Props) {
         )}
         <DeepLSettingsButton />
       </div>
+      <WordDownloads knowledge={knowledge} />
 
       <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
         Paste Korean text to start reading. Words are colored by how well you know them.

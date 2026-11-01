@@ -1,5 +1,5 @@
 import type { KnowledgeState, PartOfSpeech } from '../domain/model';
-import type { KnowledgeRepository } from './repository';
+import type { KnowledgeRepository, KnowledgeWord } from './repository';
 
 const LS_KEY = 'korean-reader:knowledge';
 
@@ -24,6 +24,13 @@ export class LocalStorageKnowledgeRepository implements KnowledgeRepository {
     localStorage.setItem(LS_KEY, JSON.stringify([...this.store]));
   }
 
+  async listWords(): Promise<KnowledgeWord[]> {
+    return [...this.store].map(([key, state]) => {
+      const [lemma, pos] = key.split('\x00') as [string, PartOfSpeech];
+      return { lemma, pos, state };
+    });
+  }
+
   async getState(lemma: string, pos: PartOfSpeech): Promise<KnowledgeState> {
     return this.store.get(this.key(lemma, pos)) ?? 'NEW';
   }
@@ -34,8 +41,11 @@ export class LocalStorageKnowledgeRepository implements KnowledgeRepository {
     this.listeners.get(this.key(lemma, pos))?.forEach(cb => cb(state));
   }
 
-  async recordSeen(_lemma: string, _pos: PartOfSpeech): Promise<void> {
-    // localStorage version: no-op (times_seen not tracked here)
+  async recordSeen(lemma: string, pos: PartOfSpeech): Promise<void> {
+    const key = this.key(lemma, pos);
+    if (this.store.has(key)) return;
+    this.store.set(key, 'NEW');
+    this.persist();
   }
 
   observeState(lemma: string, pos: PartOfSpeech, callback: (state: KnowledgeState) => void): () => void {

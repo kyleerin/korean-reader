@@ -96,7 +96,7 @@ export function App() {
   }
 
   if (state.phase === 'home') {
-    return <ImportScreen onImport={handleImport} dueCount={dueCount} onReview={handleGoReview} />;
+    return <ImportScreen knowledge={state.knowledge} onImport={handleImport} dueCount={dueCount} onReview={handleGoReview} />;
   }
 
   if (state.phase === 'review') {

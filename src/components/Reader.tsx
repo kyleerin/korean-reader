@@ -10,6 +10,7 @@ import { resolveTextSelection, type TextSelection } from '../selection/resolve';
 import { AiTranslation } from './AiTranslation';
 import { SelectionPanel } from './SelectionPanel';
 import { TapPanel } from './TapPanel';
+import { WordDownloads } from './WordDownloads';
 
 interface Props {
   text: AnalyzedText;
@@ -317,6 +318,7 @@ export function Reader({ text, sourceText, knowledge, reviewRepo, onBack }: Prop
         </span>
         <DeepLSettingsButton />
       </div>
+      <WordDownloads knowledge={knowledge} />
 
       <div
         ref={readingRef}

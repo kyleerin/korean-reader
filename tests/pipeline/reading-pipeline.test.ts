@@ -59,6 +59,17 @@ describe('ReadingPipeline', () => {
     expect(sentences[0]!.eojeols).toHaveLength(3);
   });
 
+  it('saves encountered vocabulary for export without changing existing states', async () => {
+    await knowledge.setState('먹다', 'VV', 'KNOWN');
+    await pipeline.analyze(SENTENCE);
+    await pipeline.analyze(SENTENCE);
+    expect(await knowledge.listWords()).toEqual([
+      { lemma: '먹다', pos: 'VV', state: 'KNOWN' },
+      { lemma: '나', pos: 'NP', state: 'NEW' },
+      { lemma: '밥', pos: 'NN', state: 'NEW' },
+    ]);
+  });
+
   // ── Lemma reconstruction ───────────────────────────────────────────────────
 
   it('noun lemma is unchanged', async () => {

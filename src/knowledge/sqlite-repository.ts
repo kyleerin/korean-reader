@@ -1,11 +1,17 @@
 import type { DbClient } from '../db/client';
 import type { KnowledgeState, PartOfSpeech } from '../domain/model';
-import type { KnowledgeRepository } from './repository';
+import type { KnowledgeRepository, KnowledgeWord } from './repository';
 
 export class SqliteKnowledgeRepository implements KnowledgeRepository {
   private readonly listeners = new Map<string, Set<(s: KnowledgeState) => void>>();
 
   constructor(private readonly db: DbClient) {}
+
+  async listWords(): Promise<KnowledgeWord[]> {
+    return this.db.all<{ lemma: string; pos: PartOfSpeech; status: KnowledgeState }>(
+      'SELECT lemma, pos, status FROM user_word_state',
+    ).map(row => ({ lemma: row.lemma, pos: row.pos, state: row.status }));
+  }
 
   async getState(lemma: string, pos: PartOfSpeech): Promise<KnowledgeState> {
     const row = this.db.get<{ status: string }>(

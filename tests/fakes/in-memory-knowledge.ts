@@ -1,4 +1,4 @@
-import type { KnowledgeRepository } from '../../src/knowledge/repository';
+import type { KnowledgeRepository, KnowledgeWord } from '../../src/knowledge/repository';
 import type { KnowledgeState, PartOfSpeech } from '../../src/domain/model';
 
 export class InMemoryKnowledgeRepository implements KnowledgeRepository {
@@ -7,6 +7,13 @@ export class InMemoryKnowledgeRepository implements KnowledgeRepository {
 
   private key(lemma: string, pos: PartOfSpeech): string {
     return lemma + '\x00' + pos;
+  }
+
+  async listWords(): Promise<KnowledgeWord[]> {
+    return [...this.states].map(([key, state]) => {
+      const [lemma, pos] = key.split('\x00') as [string, PartOfSpeech];
+      return { lemma, pos, state };
+    });
   }
 
   async getState(lemma: string, pos: PartOfSpeech): Promise<KnowledgeState> {

@@ -14,6 +14,7 @@ A reading-immersion web app for Korean learners. Paste any Korean text, tap word
 - **Tap to define** — tap any word to see its dictionary form, definitions, and POS tag
 - **Live recoloring** — marking a word instantly recolors every occurrence in the current text
 - **Spaced repetition** — LEARNING words become flashcards, scheduled by [FSRS](https://github.com/open-spaced-repetition/fsrs4anki/wiki/The-Algorithm)
+- **Vocabulary downloads** — open **Download words** on the home or reading screen to save known or unknown vocabulary as a UTF-8 `.txt` file containing just a comma-separated list of dictionary forms (for example, `가다, 먹다, 밥`), each word listed once, with no header or extra columns. Unknown includes NEW and LEARNING; IGNORED words are excluded. Downloads include all vocabulary saved in this browser. Newly encountered vocabulary is saved automatically; unmarked words from texts read before this feature require reopening the text.
 - **Offline-first** — dictionary and analyzer are bundled; works without a network connection after first load
 
 ## Getting started

@@ -1,6 +1,7 @@
 import { dictionaryPosLookupOrder } from '../dictionary/pos-fallbacks';
 import type { DictionaryRepository } from '../dictionary/repository';
 import type { AnalyzedEojeol, AnalyzedMorpheme, AnalyzedParagraph, AnalyzedSentence, AnalyzedText, Morpheme } from '../domain/model';
+import { uniqueVocabularyMorphemes } from '../domain/model';
 import type { KnowledgeRepository } from '../knowledge/repository';
 import type { EojeolMorphemes, MorphologicalAnalyzer } from './analyzer';
 import { lemmaCandidates, nativeNumeralNrLemma, surfaceLemmaCandidates } from './lemma-reconstructor';
@@ -27,7 +28,11 @@ export class ReadingPipeline {
       segmentParagraphs(text).map(s => this.analyzeParagraph(s)),
     );
     const sentences = paragraphs.flatMap(p => p.sentences);
-    return { paragraphs, sentences };
+    const analyzed = { paragraphs, sentences };
+    for (const word of uniqueVocabularyMorphemes(analyzed)) {
+      await this.knowledge.recordSeen(word.lemma, word.pos);
+    }
+    return analyzed;
   }
 
   private async analyzeParagraph(sentences: string[]): Promise<AnalyzedParagraph> {

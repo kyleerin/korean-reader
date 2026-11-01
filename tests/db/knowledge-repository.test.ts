@@ -42,6 +42,18 @@ describe('SqliteKnowledgeRepository', () => {
     expect(await repo.getState('가다', 'VV')).toBe('LEARNING');
   });
 
+  it('lists saved states and encountered vocabulary once per lemma and POS', async () => {
+    expect(await repo.listWords()).toEqual([]);
+    await repo.setState('밥', 'NN', 'KNOWN');
+    await repo.recordSeen('밥', 'NN');
+    await repo.recordSeen('먹다', 'VV');
+    await repo.recordSeen('먹다', 'VV');
+    expect(await repo.listWords()).toEqual([
+      { lemma: '밥', pos: 'NN', state: 'KNOWN' },
+      { lemma: '먹다', pos: 'VV', state: 'NEW' },
+    ]);
+  });
+
   describe('observeState', () => {
     it('fires callback when state changes', async () => {
       const cb = vi.fn();
