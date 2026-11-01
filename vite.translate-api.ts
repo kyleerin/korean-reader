@@ -1,14 +1,14 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Plugin } from 'vite';
+import { HttpBodyError, readJsonBody } from './server/http';
+import {
+  clientKeyFromRequest,
+  guardTranslateAccess,
+  parseAllowedOrigins,
+} from './server/proxy-guard';
 import { processTranslateRequest } from './server/translate-route';
 
-async function readJsonBody(req: IncomingMessage): Promise<unknown> {
-  const chunks: Buffer[] = [];
-  for await (const chunk of req) chunks.push(chunk as Buffer);
-  const raw = Buffer.concat(chunks).toString('utf8');
-  if (!raw) return {};
-  return JSON.parse(raw) as unknown;
-}
+const ALLOWED_ORIGINS = parseAllowedOrigins(process.env.TRANSLATE_ALLOWED_ORIGINS);
 
 function sendJson(res: ServerResponse, status: number, body: unknown): void {
   res.statusCode = status;
@@ -16,17 +16,37 @@ function sendJson(res: ServerResponse, status: number, body: unknown): void {
   res.end(JSON.stringify(body));
 }
 
+function requestOrigin(req: IncomingMessage): string | undefined {
+  const value = req.headers.origin;
+  return Array.isArray(value) ? value[0] : value;
+}
+
 async function handleTranslate(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const origin = requestOrigin(req);
+  const access = guardTranslateAccess({
+    origin,
+    clientKey: clientKeyFromRequest(req.headers),
+    allowedOrigins: ALLOWED_ORIGINS,
+  });
+  if (!access.ok) {
+    sendJson(res, access.status, access.body);
+    return;
+  }
+
   try {
     const body = await readJsonBody(req);
     const result = await processTranslateRequest(body as Parameters<typeof processTranslateRequest>[0]);
     sendJson(res, result.status, result.body);
   } catch (err) {
+    if (err instanceof HttpBodyError) {
+      sendJson(res, err.status, { error: err.message });
+      return;
+    }
     if (err instanceof SyntaxError) {
       sendJson(res, 400, { error: 'Invalid JSON body.' });
       return;
     }
-    console.error('Translation error:', err);
+    console.error('Translation error:', err instanceof Error ? err.message : err);
     sendJson(res, 500, { error: 'Internal server error.' });
   }
 }
