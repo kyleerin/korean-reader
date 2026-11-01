@@ -2,6 +2,7 @@ import type { DbClient, SqlParam } from '../db/client';
 import type { DictionaryEntry, PartOfSpeech } from '../domain/model';
 import type { DictionaryRepository } from './repository';
 
+/** EXPERIMENTAL — unused by App; production uses NdjsonDictionaryRepository. */
 export class SqliteDictionaryRepository implements DictionaryRepository {
   constructor(private readonly db: DbClient) {}
 

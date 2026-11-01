@@ -16,7 +16,11 @@ export interface KnowledgeRepository {
   /** Persists a state change. */
   setState(lemma: string, pos: PartOfSpeech, state: KnowledgeState): Promise<void>;
 
-  /** Records a sighting without changing status (increments times_seen). */
+  /**
+   * Records that a lemma was encountered in a text.
+   * Inserts NEW when unseen; leaves an existing state unchanged.
+   * (times_seen counters are deferred until OPFS persistence.)
+   */
   recordSeen(lemma: string, pos: PartOfSpeech): Promise<void>;
 
   /**

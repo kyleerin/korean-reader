@@ -3,8 +3,9 @@ import { SCHEMA_SQL } from './schema';
 import type { DbClient, Row, SqlParam } from './client';
 
 /**
- * DbClient backed by @sqlite.org/sqlite-wasm.
+ * EXPERIMENTAL — not wired into App. Production uses localStorage + ndjson.
  *
+ * DbClient backed by @sqlite.org/sqlite-wasm.
  * In the browser, pass a path inside OPFS for persistence.
  * Pass ':memory:' for an in-memory database (used in tests).
  */

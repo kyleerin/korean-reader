@@ -1,4 +1,7 @@
-/** DDL run once on database open. Safe to re-run (IF NOT EXISTS). */
+/**
+ * EXPERIMENTAL OPFS/SQLite schema — not used by the production App yet.
+ * DDL run once on database open. Safe to re-run (IF NOT EXISTS).
+ */
 export const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS dictionary_entry (
   lemma            TEXT NOT NULL,

@@ -2,6 +2,7 @@ import type { DbClient } from '../db/client';
 import type { KnowledgeState, PartOfSpeech } from '../domain/model';
 import type { KnowledgeRepository, KnowledgeWord } from './repository';
 
+/** EXPERIMENTAL — unused by App; production uses LocalStorageKnowledgeRepository. */
 export class SqliteKnowledgeRepository implements KnowledgeRepository {
   private readonly listeners = new Map<string, Set<(s: KnowledgeState) => void>>();
 
