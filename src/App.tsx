@@ -9,6 +9,7 @@ import { LocalStorageKnowledgeRepository } from './knowledge/local-storage-repos
 import { LocalStorageReviewRepository } from './review/local-storage-repository';
 import { GaruKoAnalyzer } from './analyzer/garu-ko-analyzer';
 import { ReadingPipeline } from './pipeline/reading-pipeline';
+import { getReadingSession, saveReadingSession } from './session/storage';
 import { ImportScreen } from './components/ImportScreen';
 import { Reader } from './components/Reader';
 import { ReviewScreen } from './components/ReviewScreen';
@@ -50,7 +51,7 @@ export function App() {
       return FALLBACK_DICT;
     });
 
-    Promise.all([loadDict, GaruKoAnalyzer.load()]).then(([dict, analyzer]) => {
+    Promise.all([loadDict, GaruKoAnalyzer.load()]).then(async ([dict, analyzer]) => {
       const s: Extract<AppState, { phase: 'home' }> = {
         phase: 'home',
         dict,
@@ -60,8 +61,30 @@ export function App() {
         dictWarning,
       };
       homeRef.current = s;
-      setState(s);
       reviewRepo.countDue(new Date()).then(setDueCount);
+
+      const savedText = getReadingSession();
+      if (!savedText) {
+        setState(s);
+        return;
+      }
+
+      setState({ phase: 'analyzing' });
+      try {
+        const analyzed = await new ReadingPipeline(analyzer, dict, knowledge).analyze(savedText);
+        setState({
+          phase: 'reading',
+          text: analyzed,
+          sourceText: savedText,
+          dict,
+          analyzer,
+          knowledge,
+          reviewRepo,
+          dictWarning,
+        });
+      } catch (err) {
+        setState({ phase: 'error', message: err instanceof Error ? err.message : String(err) });
+      }
     }).catch((err: unknown) => {
       setState({ phase: 'error', message: err instanceof Error ? err.message : String(err) });
     });
@@ -80,6 +103,7 @@ export function App() {
     setState({ phase: 'analyzing' });
     try {
       const analyzed = await new ReadingPipeline(analyzer, dict, knowledge).analyze(rawText);
+      saveReadingSession(rawText);
       setState({
         phase: 'reading',
         text: analyzed,
