@@ -4,6 +4,7 @@ import type { KnowledgeRepository } from '../knowledge/repository';
 import type { ReviewRepository } from '../review/repository';
 import { hasNewWords, isFullyKnown, uniqueVocabularyMorphemes } from '../domain/model';
 import { useReadingTextSelection } from '../hooks/useReadingTextSelection';
+import { clearReadingSession } from '../session/storage';
 import { useDeepLSettings, DeepLSettingsButton } from '../translation/DeepLSettings';
 import { resolveTextSelection, type TextSelection } from '../selection/resolve';
 import { AiTranslation } from './AiTranslation';
@@ -108,6 +109,7 @@ export function Reader({ text, sourceText, knowledge, reviewRepo, onBack }: Prop
         await knowledge.setState(morpheme.lemma, morpheme.pos, 'KNOWN');
         await reviewRepo.deleteCard(morpheme.lemma, morpheme.pos);
       }));
+      clearReadingSession();
       onBack();
     } catch (err) {
       console.error('Failed to mark new words as known:', err);
